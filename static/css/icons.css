@@ -1,0 +1,126 @@
+/* SVG Icons for School Cafe - No emojis, pure SVG */
+
+/* Base icon styles */
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;
+  fill: currentColor;
+}
+
+/* Logo Icon - Utensils Crossed */
+.icon-utensils {
+  width: 24px;
+  height: 24px;
+}
+
+/* Search Icon */
+.icon-search {
+  width: 20px;
+  height: 20px;
+}
+
+/* Cart/Shopping Cart */
+.icon-cart {
+  width: 20px;
+  height: 20px;
+}
+
+/* Plus/Add */
+.icon-plus {
+  width: 16px;
+  height: 16px;
+}
+
+/* Minus/Remove */
+.icon-minus {
+  width: 16px;
+  height: 16px;
+}
+
+/* Trash/Delete */
+.icon-trash {
+  width: 16px;
+  height: 16px;
+}
+
+/* Close/X */
+.icon-close {
+  width: 20px;
+  height: 20px;
+}
+
+/* Chevron Left */
+.icon-chevron-left {
+  width: 20px;
+  height: 20px;
+}
+
+/* Chevron Right */
+.icon-chevron-right {
+  width: 20px;
+  height: 20px;
+}
+
+/* Calendar */
+.icon-calendar {
+  width: 20px;
+  height: 20px;
+}
+
+/* Sun/Breakfast */
+.icon-sun {
+  width: 16px;
+  height: 16px;
+}
+
+/* Utensils/Lunch */
+.icon-utensils-small {
+  width: 16px;
+  height: 16px;
+}
+
+/* Cookie/Snack */
+.icon-cookie {
+  width: 16px;
+  height: 16px;
+}
+
+/* Checkmark */
+.icon-check {
+  width: 14px;
+  height: 14px;
+}
+
+/* Clock */
+.icon-clock {
+  width: 20px;
+  height: 20px;
+}
+
+/* Check Circle (Success) */
+.icon-check-circle {
+  width: 48px;
+  height: 48px;
+}
+
+/* Arrow Right */
+.icon-arrow-right {
+  width: 20px;
+  height: 20px;
+}
+
+/* Category Icons */
+.icon-sun-category { /* Breakfast */ }
+.icon-utensils-category { /* Main Courses */ }
+.icon-cookie-category { /* Snacks */ }
+.icon-cup-category { /* Beverages */ }
+.icon-leaf-category { /* Healthy */ }
+.icon-cake-category { /* Desserts */ }
+
+/* Package (Empty state) */
+.icon-package {
+  width: 64px;
+  height: 64px;
+}

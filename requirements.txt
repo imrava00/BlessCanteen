@@ -1,0 +1,8 @@
+Flask==3.0.0
+gunicorn==21.2.0
+
+# Google Drive Integration (optional - for cloud storage)
+google-api-python-client==2.100.0
+google-auth==2.23.4
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
