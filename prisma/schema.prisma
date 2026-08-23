@@ -1,0 +1,109 @@
+// School Catering Admin - Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Admin user for authentication
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  name      String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Weekly menu configuration
+model WeeklyMenu {
+  id          String     @id @default(cuid())
+  weekNumber  Int
+  year        Int
+  isActive    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  days        DayMenu[]
+  
+  @@unique([weekNumber, year])
+}
+
+// Daily menu within a week
+model DayMenu {
+  id          String   @id @default(cuid())
+  day         String   // Senin, Selasa, Rabu, Kamis, Jumat
+  dayOrder    Int      // 1=Senin, 2=Selasa, 3=Rabu, 4=Kamis, 5=Jumat
+  weekMenuId  String
+  weekMenu    WeeklyMenu @relation(fields: [weekMenuId], references: [id], onDelete: Cascade)
+  
+  categories  Category[]
+  
+  @@unique([day, weekMenuId])
+}
+
+// Category (Hidangan Utama, Makanan Ringan, Tambahan)
+model Category {
+  id        String   @id @default(cuid())
+  name      String   // e.g., "Hidangan Utama", "Makanan Ringan", "Tambahan"
+  icon      String   // emoji icon
+  gradient  String   // e.g., "from-orange-500 to-red-500"
+  dayMenuId String
+  dayMenu   DayMenu  @relation(fields: [dayMenuId], references: [id], onDelete: Cascade)
+  
+  items     MenuItem[]
+  
+  @@unique([name, dayMenuId])
+}
+
+// Individual menu item with price
+model MenuItem {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Int
+  emoji       String
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  orderItems  OrderItem[]
+}
+
+// Customer orders
+model Order {
+  id            String      @id @default(cuid())
+  orderId       String      @unique // Human-readable order ID like SC-XXXXX
+  studentName   String
+  school        String
+  grade         String
+  parentName    String
+  parentPhone   String
+  totalAmount   Int
+  status        String       @default("pending") // pending, confirmed, cancelled
+  weekNumber    Int?
+  year          Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  items         OrderItem[]
+}
+
+// Items in an order
+model OrderItem {
+  id          String    @id @default(cuid())
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId  String?
+  menuItem    MenuItem? @relation(fields: [menuItemId], references: [id])
+  day         String
+  categoryName String
+  itemName    String
+  itemEmoji   String
+  price       Int
+  quantity    Int        @default(1)
+}

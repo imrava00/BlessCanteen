@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,19 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bless Canteen - Weekly Meal Ordering System",
-  description: "Order your weekly meals easily with Bless Canteen. Fresh, delicious food delivered daily to our school community.",
-  keywords: ["Bless Canteen", "Meal Ordering", "School Canteen", "Weekly Orders", "Food Service"],
-  authors: [{ name: "Bless Canteen Team" }],
-  icons: {
-    icon: "/favicon.ico",
-  },
-  openGraph: {
-    title: "Bless Canteen - Weekly Meal Ordering",
-    description: "Order your weekly meals easily with Bless Canteen",
-    siteName: "Bless Canteen",
-    type: "website",
-  },
+  title: "School Catering - Panel Admin",
+  description: "Panel Administrator untuk mengelola pesanan katering sekolah",
 };
 
 export default function RootLayout({
@@ -42,7 +30,6 @@ export default function RootLayout({
       >
         {children}
         <Toaster />
-        <SonnerToaster position="top-right" richColors closeButton />
       </body>
     </html>
   );
