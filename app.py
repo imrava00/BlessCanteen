@@ -1,5 +1,5 @@
 """
-School Cafe - Weekly Meal Ordering System
+Bless Canteen - Weekly Meal Ordering System
 Flask application for PythonAnywhere deployment
 With Payment Proof Upload Feature (BCA Bank Transfer)
 Supports: Local Storage + Google Drive Integration
@@ -17,8 +17,8 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__, 
             template_folder='templates',
             static_folder='static')
-app.config['SECRET_KEY'] = 'school-cafe-secret-key-2024'
-app.config['DATABASE'] = 'school_cafe.db'
+app.config['SECRET_KEY'] = 'bless-canteen-secret-key-2024'
+app.config['DATABASE'] = 'bless_canteen.db'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
@@ -29,7 +29,7 @@ app.config['ENABLE_GOOGLE_DRIVE'] = False  # Disabled - using local storage for 
 
 # Google Drive settings (only used if ENABLE_GOOGLE_DRIVE = True)
 app.config['GOOGLE_CREDENTIALS_FILE'] = 'credentials.json'  # Your service account JSON
-app.config['GOOGLE_DRIVE_FOLDER'] = 'School Cafe Payment Proofs'  # Main folder name in Drive
+app.config['GOOGLE_DRIVE_FOLDER'] = 'Bless Canteen Payment Proofs'  # Main folder name in Drive
 
 # Database helpers
 def get_db():
@@ -240,7 +240,7 @@ def get_or_create_drive_folder(service, folder_name, parent_id=None):
 
 def setup_drive_folder_structure(service):
     """
-    Create organized folder structure: School Cafe Payment Proofs/2026/August/
+    Create organized folder structure: Bless Canteen Payment Proofs/2026/August/
     Returns target folder ID for uploads
     """
     main_folder = get_or_create_drive_folder(service, app.config['GOOGLE_DRIVE_FOLDER'])
@@ -417,9 +417,9 @@ def seed_page():
                 <li><strong>MakRing</strong> - Rp 10.000</li>
                 <li><strong>MakCil</strong> - Rp 7.500</li>
             </ul>
-            <p style="margin-top: 20px;">Redirecting to School Cafe...</p>
+            <p style="margin-top: 20px;">Redirecting to Bless Canteen...</p>
             <a href="/" style="padding: 10px 20px; background: #3b82f6; color: white; 
-               text-decoration: none; border-radius: 5px; font-size: 1.1em;">Go to School Cafe →</a>
+               text-decoration: none; border-radius: 5px; font-size: 1.1em;">Go to Bless Canteen →</a>
             <script>setTimeout(() => window.location = "/", 3000);</script>
         </body>
         </html>
@@ -929,7 +929,7 @@ def upload_payment_proof():
             'bank_details': {
                 'bank_name': 'BCA (Bank Central Asia)',
                 'account_number': '3351015908',
-                'account_name': 'School Cafe Catering'
+                'account_name': 'Eva Susyana'
             }
         }
         

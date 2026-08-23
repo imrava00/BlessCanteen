@@ -1,5 +1,5 @@
 /**
- * School Cafe - Weekly Meal Ordering System
+ * Bless Canteen - Weekly Meal Ordering System
  * Frontend JavaScript - Beautiful Custom SVG Icons
  * Payment Proof Upload for BCA Bank Transfer
  */
@@ -36,7 +36,7 @@ const DAYS_OF_WEEK = [
 const BANK_DETAILS = {
   bankName: 'BCA (Bank Central Asia)',
   accountNumber: '3351015908',
-  accountName: 'School Cafe Catering',
+  accountName: 'Eva Susyana',
   whatsappNumber: '+628129524242',
   whatsappLink: 'https://wa.me/628129524242',
   instructions: [
@@ -674,13 +674,31 @@ function downloadOrderSummary(order) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   
+  // Helper function to get price from item (handle different data structures)
+  function getItemPrice(item) {
+    // Try different possible price locations
+    if (item.unit_price && item.unit_price > 0) return parseFloat(item.unit_price);
+    if (item.total_price && item.quantity) return parseFloat(item.total_price) / parseInt(item.quantity);
+    if (item.menuItem && item.menuItem.price) return parseFloat(item.menuItem.price);
+    if (item.price) return parseFloat(item.price);
+    return 0;
+  }
+  
+  // Helper function to get item name
+  function getItemName(item) {
+    if (item.menuItem && item.menuItem.name) return item.menuItem.name;
+    if (item.name) return item.name;
+    return 'Unknown Item';
+  }
+  
   // Canvas dimensions (receipt-style)
   canvas.width = 500;
   
-  // Calculate height based on content
-  const baseHeight = 600;
-  const itemHeight = order.items.length * 35;
-  const extraHeight = 150; // For WhatsApp section
+  // Calculate height based on content - with better spacing
+  const itemCount = order.items ? order.items.length : 0;
+  const baseHeight = 550;
+  const itemHeight = itemCount * 50; // More space per item
+  const extraHeight = 180; // For WhatsApp section
   canvas.height = baseHeight + itemHeight + extraHeight;
   
   // Colors
@@ -690,109 +708,114 @@ function downloadOrderSummary(order) {
     text: '#1f2937',
     textLight: '#6b7280',
     white: '#ffffff',
-    bgLight: '#f3f4f6',
-    border: '#e5e7eb',
+    bgLight: '#f8fafc',
+    border: '#e2e8f0',
     success: '#10b981',
     whatsapp: '#25D366'
   };
   
-  let yPos = 30;
+  let yPos = 25;
   
   // Background
   ctx.fillStyle = colors.white;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // Header background
+  // Header background with gradient effect
   ctx.fillStyle = colors.primary;
-  ctx.fillRect(0, 0, canvas.width, 100);
+  roundRect(ctx, 0, 0, canvas.width, 90, 0);
+  ctx.fill();
   
-  // Logo area - Circle with "SC"
+  // Logo circle
   ctx.beginPath();
-  ctx.arc(250, 50, 30, 0, Math.PI * 2);
+  ctx.arc(250, 45, 25, 0, Math.PI * 2);
   ctx.fillStyle = colors.white;
   ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
   
-  ctx.font = 'bold 20px Arial';
-  ctx.fillStyle = colors.primary;
-  ctx.textAlign = 'center';
-  ctx.fillText('SC', 250, 57);
-  
-  // Title
-  ctx.font = 'bold 24px Arial';
-  ctx.fillStyle = colors.white;
-  ctx.fillText('SCHOOL CAFE', 250, 90);
-  
-  yPos = 120;
-  
-  // Order Number Box
-  ctx.fillStyle = colors.bgLight;
-  roundRect(ctx, 30, yPos, canvas.width - 60, 45, 8);
-  ctx.fill();
-  
+  // Logo text "SC"
   ctx.font = 'bold 18px Arial';
   ctx.fillStyle = colors.primary;
   ctx.textAlign = 'center';
-  ctx.fillText(`Order: ${order.order_number}`, 250, yPos + 28);
+  ctx.textBaseline = 'middle';
+  ctx.fillText('BC', 250, 46);
   
-  yPos += 65;
+  // Title
+  ctx.font = 'bold 22px Arial';
+  ctx.fillStyle = colors.white;
+  ctx.fillText('BLESS CANTEEN', 250, 78);
   
-  // Date and Week info
-  ctx.font = '13px Arial';
+  yPos = 105;
+  
+  // Order Number Box
+  ctx.fillStyle = colors.bgLight;
+  roundRect(ctx, 30, yPos, canvas.width - 60, 40, 6);
+  ctx.fill();
+  
+  ctx.font = 'bold 16px Arial';
+  ctx.fillStyle = colors.primary;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(`ORDER: ${order.order_number}`, 250, yPos + 26);
+  
+  yPos += 55;
+  
+  // Date and info section
+  ctx.font = '12px Arial';
   ctx.fillStyle = colors.textLight;
   ctx.textAlign = 'left';
   
   const orderDate = new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
+    weekday: 'short', 
+    month: 'short', 
     day: 'numeric',
+    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   });
   
-  ctx.fillText(`Generated: ${orderDate}`, 50, yPos);
-  yPos += 20;
+  ctx.fillText(`Date: ${orderDate}`, 45, yPos);
+  yPos += 18;
   
-  // Format week dates using UTC
-  const weekStart = new Date(order.week_start_date + 'T00:00:00Z');
-  const weekEnd = new Date(order.week_end_date + 'T00:00:00Z');
-  const weekStr = `${weekStart.toLocaleDateString('en-US', {timeZone: 'UTC'})} - ${weekEnd.toLocaleDateString('en-US', {timeZone: 'UTC'})}`;
-  ctx.fillText(`Week: ${weekStr}`, 50, yPos);
-  yPos += 20;
+  // Format week dates
+  if (order.week_start_date && order.week_end_date) {
+    const weekStart = new Date(order.week_start_date + 'T00:00:00Z');
+    const weekEnd = new Date(order.week_end_date + 'T00:00:00Z');
+    const weekStr = `${weekStart.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})} - ${weekEnd.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'})}`;
+    ctx.fillText(`Week: ${weekStr}`, 45, yPos);
+    yPos += 18;
+  }
   
-  ctx.fillText(`Status: ${order.status.toUpperCase()}`, 50, yPos);
-  yPos += 35;
+  ctx.fillText(`Status: ${(order.status || 'pending').toUpperCase()}`, 45, yPos);
+  yPos += 30;
   
   // Divider
-  ctx.strokeStyle = colors.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(30, yPos);
-  ctx.lineTo(canvas.width - 30, yPos);
-  ctx.stroke();
-  yPos += 20;
+  drawDivider(ctx, 30, yPos, canvas.width - 30, colors.border);
+  yPos += 15;
   
   // Section Title - ORDER DETAILS
-  ctx.font = 'bold 16px Arial';
+  ctx.font = 'bold 14px Arial';
   ctx.fillStyle = colors.primary;
-  ctx.textAlign = 'left';
-  ctx.fillText('ORDER DETAILS', 50, yPos);
-  yPos += 25;
+  ctx.fillText('ORDER DETAILS', 45, yPos);
+  yPos += 22;
   
   // Group items by date
   const itemsByDate = {};
-  order.items.forEach(item => {
-    const dateKey = item.meal_date;
-    if (!itemsByDate[dateKey]) {
-      itemsByDate[dateKey] = [];
-    }
-    itemsByDate[dateKey].push(item);
-  });
+  if (order.items) {
+    order.items.forEach(item => {
+      const dateKey = item.meal_date || item.mealDate || 'unknown';
+      if (!itemsByDate[dateKey]) {
+        itemsByDate[dateKey] = [];
+      }
+      itemsByDate[dateKey].push(item);
+    });
+  }
   
   let grandTotal = 0;
   
   Object.entries(itemsByDate).sort().forEach(([date, items]) => {
-    const dateObj = new Date(date + 'T00:00:00Z'); // Parse as UTC
+    const dateObj = new Date(date + 'T00:00:00Z');
     const dateStr = dateObj.toLocaleDateString('en-US', { 
       weekday: 'short', 
       month: 'short', 
@@ -800,109 +823,118 @@ function downloadOrderSummary(order) {
       timeZone: 'UTC'
     });
     
-    // Date header
-    ctx.fillStyle = colors.bgLight;
-    roundRect(ctx, 40, yPos - 15, canvas.width - 80, 22, 4);
+    // Date header bar
+    ctx.fillStyle = colors.primary;
+    roundRect(ctx, 35, yPos - 12, canvas.width - 70, 24, 4);
     ctx.fill();
     
-    ctx.font = 'bold 12px Arial';
-    ctx.fillStyle = colors.text;
-    ctx.fillText(dateStr.toUpperCase(), 50, yPos);
+    ctx.font = 'bold 11px Arial';
+    ctx.fillStyle = colors.white;
+    ctx.fillText(dateStr.toUpperCase(), 45, yPos + 4);
     yPos += 20;
     
+    // Items for this date
     items.forEach(item => {
-      const itemTotal = item.unit_price * item.quantity;
+      const itemName = getItemName(item);
+      const price = getItemPrice(item);
+      const qty = item.quantity || 1;
+      const itemTotal = price * qty;
       grandTotal += itemTotal;
       
-      // Item row
+      // Item row background (alternating)
+      ctx.fillStyle = items.indexOf(item) % 2 === 0 ? colors.bgLight : colors.white;
+      roundRect(ctx, 40, yPos - 5, canvas.width - 80, 32, 4);
+      ctx.fill();
+      
+      // Item name and quantity
       ctx.font = '13px Arial';
       ctx.fillStyle = colors.text;
-      const itemText = `• ${item.menuItem.name} x${item.quantity}`;
-      ctx.fillText(itemText, 60, yPos);
+      ctx.textAlign = 'left';
+      ctx.fillText(`${itemName} x${qty}`, 52, yPos + 12);
       
       // Price (right aligned)
+      ctx.font = 'bold 13px Arial';
       ctx.fillStyle = colors.primaryDark;
       ctx.textAlign = 'right';
-      ctx.fillText(formatRupiah(itemTotal), canvas.width - 60, yPos);
+      ctx.fillText(formatRupiah(itemTotal), canvas.width - 55, yPos + 12);
       ctx.textAlign = 'left';
       
-      yPos += 28;
+      yPos += 38;
     });
     
-    yPos += 10;
+    yPos += 8;
   });
   
   // Divider before total
-  ctx.strokeStyle = colors.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(30, yPos);
-  ctx.lineTo(canvas.width - 30, yPos);
-  ctx.stroke();
-  yPos += 20;
+  drawDivider(ctx, 30, yPos, canvas.width - 30, colors.border);
+  yPos += 15;
   
-  // Total Box
+  // Total Box - larger and more prominent
   ctx.fillStyle = colors.success;
-  roundRect(ctx, 30, yPos, canvas.width - 60, 50, 8);
+  roundRect(ctx, 30, yPos, canvas.width - 60, 55, 8);
   ctx.fill();
   
-  ctx.font = 'bold 18px Arial';
+  ctx.font = 'bold 20px Arial';
   ctx.fillStyle = colors.white;
   ctx.textAlign = 'center';
-  ctx.fillText(`TOTAL: ${formatRupiah(grandTotal)}`, 250, yPos + 32);
-  yPos += 70;
+  ctx.fillText(`TOTAL: ${formatRupiah(grandTotal)}`, 250, yPos + 35);
+  yPos += 75;
   
   // Divider
-  ctx.strokeStyle = colors.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(30, yPos);
-  ctx.lineTo(canvas.width - 30, yPos);
-  ctx.stroke();
-  yPos += 20;
+  drawDivider(ctx, 30, yPos, canvas.width - 30, colors.border);
+  yPos += 15;
   
   // Payment Section Header
-  ctx.font = 'bold 14px Arial';
+  ctx.font = 'bold 13px Arial';
   ctx.fillStyle = colors.primary;
   ctx.textAlign = 'left';
-  ctx.fillText('PAYMENT DETAILS', 50, yPos);
-  yPos += 25;
+  ctx.fillText('PAYMENT DETAILS', 45, yPos);
+  yPos += 22;
   
   // Bank details box
   ctx.fillStyle = colors.bgLight;
-  roundRect(ctx, 40, yPos - 10, canvas.width - 80, 85, 6);
+  roundRect(ctx, 35, yPos - 8, canvas.width - 70, 95, 6);
   ctx.fill();
   
-  ctx.font = '12px Arial';
+  ctx.font = '11px Arial';
   ctx.fillStyle = colors.text;
-  ctx.fillText(`Bank: ${BANK_DETAILS.bankName}`, 55, yPos + 5);
-  ctx.fillText(`Account: ${BANK_DETAILS.accountNumber}`, 55, yPos + 22);
-  ctx.fillText(`A/N: ${BANK_DETAILS.accountName}`, 55, yPos + 39);
-  ctx.fillStyle = colors.primaryDark;
-  ctx.font = 'bold 12px Arial';
-  ctx.fillText(`Amount: ${formatRupiah(grandTotal)}`, 55, yPos + 56);
-  yPos += 105;
+  ctx.fillText(`Bank: ${BANK_DETAILS.bankName}`, 50, yPos + 5);
+  ctx.fillText(`Account No: ${BANK_DETAILS.accountNumber}`, 50, yPos + 22);
+  ctx.fillText(`Account Name: ${BANK_DETAILS.accountName}`, 50, yPos + 39);
   
-  // WhatsApp Section
+  ctx.font = 'bold 12px Arial';
+  ctx.fillStyle = colors.primaryDark;
+  ctx.fillText(`Amount Due: ${formatRupiah(grandTotal)}`, 50, yPos + 58);
+  yPos += 115;
+  
+  // WhatsApp Section - more prominent
   ctx.fillStyle = colors.whatsapp;
-  roundRect(ctx, 30, yPos, canvas.width - 60, 75, 10);
+  roundRect(ctx, 25, yPos, canvas.width - 50, 85, 10);
   ctx.fill();
   
-  ctx.font = 'bold 14px Arial';
-  ctx.fillStyle = colors.white;
+  // WhatsApp icon text
+  ctx.font = 'bold 11px Arial';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.textAlign = 'center';
   ctx.fillText('SEND PAYMENT PROOF VIA WHATSAPP', 250, yPos + 22);
   
-  ctx.font = 'bold 18px Arial';
-  ctx.fillText(BANK_DETAILS.whatsappNumber, 250, yPos + 48);
-  yPos += 95;
+  // Phone number - larger
+  ctx.font = 'bold 22px Arial';
+  ctx.fillStyle = colors.white;
+  ctx.fillText(BANK_DETAILS.whatsappNumber, 250, yPos + 52);
   
-  // Footer
-  ctx.font = '11px Arial';
+  // Instruction
+  ctx.font = '10px Arial';
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText('Click Open WhatsApp button & attach transfer screenshot', 250, yPos + 72);
+  yPos += 100;
+  
+  // Footer note
+  ctx.font = 'italic 10px Arial';
   ctx.fillStyle = colors.textLight;
   ctx.textAlign = 'center';
-  ctx.fillText('Thank you for ordering from School Cafe!', 250, yPos);
-  ctx.fillText('Include your Order Number when sending payment proof.', 250, yPos + 16);
+  ctx.fillText('Thank you for ordering from Bless Canteen!', 250, yPos);
+  ctx.fillText(`Reference: ${order.order_number}`, 250, yPos + 14);
   
   // Helper function to draw rounded rectangles
   function roundRect(ctx, x, y, width, height, radius) {
@@ -919,16 +951,33 @@ function downloadOrderSummary(order) {
     ctx.closePath();
   }
   
-  // Convert canvas to JPG and download
-  const dataURL = canvas.toDataURL('image/jpeg', 0.9);
-  const link = document.createElement('a');
-  link.download = `Order_${order.order_number}.jpg`;
-  link.href = dataURL;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  // Helper function to draw dividers
+  function drawDivider(ctx, x, y, width, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   
-  alert('Order summary downloaded as JPG image! You can now send this image via WhatsApp as payment proof.');
+  // Convert canvas to JPG and download
+  try {
+    const dataURL = canvas.toDataURL('image/jpeg', 0.95);
+    const link = document.createElement('a');
+    link.download = `Order_${order.order_number}.jpg`;
+    link.href = dataURL;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    alert('Order summary downloaded as JPG image!\n\nYou can now send this image via WhatsApp as payment proof.');
+  } catch (error) {
+    console.error('Error generating JPG:', error);
+    alert('Error generating image. Please try again.');
+  }
 }
 
 async function seedDatabase() {
@@ -1049,7 +1098,7 @@ function renderHeader() {
             ${ICONS.logo}
           </div>
           <div class="logo-text">
-            <h1>School Cafe</h1>
+            <h1>Bless Canteen</h1>
             <p>Weekly Meal Ordering</p>
           </div>
         </div>
@@ -1431,9 +1480,9 @@ function renderFooter() {
       <div class="container">
         <div class="footer-grid">
           <div class="footer-section">
-            <h4>${ICONS.logo} School Cafe</h4>
+            <h4>${ICONS.logo} Bless Canteen</h4>
             <p style="color: var(--gray-400); font-size: 0.875rem; margin-top: 0.5rem;">
-              Plan your entire week of nutritious meals in advance!
+              Plan your entire week of delicious meals in advance!
             </p>
           </div>
           
@@ -1460,7 +1509,7 @@ function renderFooter() {
         <div class="footer-divider"></div>
         
         <div class="footer-bottom">
-          <p>School Cafe - Weekly Meal Ordering System</p>
+          <p>Bless Canteen - Weekly Meal Ordering System</p>
         </div>
       </div>
     </footer>
