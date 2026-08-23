@@ -77,15 +77,22 @@ function getMonday(date) {
 }
 
 function formatDate(date) {
-  return date.toISOString().split('T')[0];
+  // Use UTC methods to ensure consistent date formatting across timezones
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function formatDisplayDate(date) {
-  return date.toLocaleDateString('en-US', { 
+  // Use UTC methods for consistent weekday display
+  const options = { 
     weekday: 'long', 
     month: 'long', 
-    day: 'numeric' 
-  });
+    day: 'numeric',
+    timeZone: 'UTC'
+  };
+  return date.toLocaleDateString('en-US', options);
 }
 
 function generateId() {
@@ -663,7 +670,77 @@ async function uploadPaymentProof(orderId) {
 }
 
 function downloadOrderSummary(order) {
-  // Create order summary content
+  // Create canvas for JPG generation
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // Canvas dimensions (receipt-style)
+  canvas.width = 500;
+  
+  // Calculate height based on content
+  const baseHeight = 600;
+  const itemHeight = order.items.length * 35;
+  const extraHeight = 150; // For WhatsApp section
+  canvas.height = baseHeight + itemHeight + extraHeight;
+  
+  // Colors
+  const colors = {
+    primary: '#2563eb',
+    primaryDark: '#1d4ed8',
+    text: '#1f2937',
+    textLight: '#6b7280',
+    white: '#ffffff',
+    bgLight: '#f3f4f6',
+    border: '#e5e7eb',
+    success: '#10b981',
+    whatsapp: '#25D366'
+  };
+  
+  let yPos = 30;
+  
+  // Background
+  ctx.fillStyle = colors.white;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Header background
+  ctx.fillStyle = colors.primary;
+  ctx.fillRect(0, 0, canvas.width, 100);
+  
+  // Logo area - Circle with "SC"
+  ctx.beginPath();
+  ctx.arc(250, 50, 30, 0, Math.PI * 2);
+  ctx.fillStyle = colors.white;
+  ctx.fill();
+  
+  ctx.font = 'bold 20px Arial';
+  ctx.fillStyle = colors.primary;
+  ctx.textAlign = 'center';
+  ctx.fillText('SC', 250, 57);
+  
+  // Title
+  ctx.font = 'bold 24px Arial';
+  ctx.fillStyle = colors.white;
+  ctx.fillText('SCHOOL CAFE', 250, 90);
+  
+  yPos = 120;
+  
+  // Order Number Box
+  ctx.fillStyle = colors.bgLight;
+  roundRect(ctx, 30, yPos, canvas.width - 60, 45, 8);
+  ctx.fill();
+  
+  ctx.font = 'bold 18px Arial';
+  ctx.fillStyle = colors.primary;
+  ctx.textAlign = 'center';
+  ctx.fillText(`Order: ${order.order_number}`, 250, yPos + 28);
+  
+  yPos += 65;
+  
+  // Date and Week info
+  ctx.font = '13px Arial';
+  ctx.fillStyle = colors.textLight;
+  ctx.textAlign = 'left';
+  
   const orderDate = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
     year: 'numeric', 
@@ -673,15 +750,34 @@ function downloadOrderSummary(order) {
     minute: '2-digit'
   });
   
-  let content = `SCHOOL CAFE - ORDER SUMMARY\n`;
-  content += `${'='.repeat(40)}\n\n`;
-  content += `Order Number: ${order.order_number}\n`;
-  content += `Date Generated: ${orderDate}\n`;
-  content += `Week: ${new Date(order.week_start_date).toLocaleDateString()} - ${new Date(order.week_end_date).toLocaleDateString()}\n`;
-  content += `Status: ${order.status}\n\n`;
-  content += `-`.repeat(40) + '\n';
-  content += `ORDER DETAILS\n`;
-  content += `-`.repeat(40) + '\n\n';
+  ctx.fillText(`Generated: ${orderDate}`, 50, yPos);
+  yPos += 20;
+  
+  // Format week dates using UTC
+  const weekStart = new Date(order.week_start_date + 'T00:00:00Z');
+  const weekEnd = new Date(order.week_end_date + 'T00:00:00Z');
+  const weekStr = `${weekStart.toLocaleDateString('en-US', {timeZone: 'UTC'})} - ${weekEnd.toLocaleDateString('en-US', {timeZone: 'UTC'})}`;
+  ctx.fillText(`Week: ${weekStr}`, 50, yPos);
+  yPos += 20;
+  
+  ctx.fillText(`Status: ${order.status.toUpperCase()}`, 50, yPos);
+  yPos += 35;
+  
+  // Divider
+  ctx.strokeStyle = colors.border;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(30, yPos);
+  ctx.lineTo(canvas.width - 30, yPos);
+  ctx.stroke();
+  yPos += 20;
+  
+  // Section Title - ORDER DETAILS
+  ctx.font = 'bold 16px Arial';
+  ctx.fillStyle = colors.primary;
+  ctx.textAlign = 'left';
+  ctx.fillText('ORDER DETAILS', 50, yPos);
+  yPos += 25;
   
   // Group items by date
   const itemsByDate = {};
@@ -694,46 +790,145 @@ function downloadOrderSummary(order) {
   });
   
   let grandTotal = 0;
+  
   Object.entries(itemsByDate).sort().forEach(([date, items]) => {
-    const dateObj = new Date(date);
-    content += `${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}\n`;
+    const dateObj = new Date(date + 'T00:00:00Z'); // Parse as UTC
+    const dateStr = dateObj.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric',
+      timeZone: 'UTC'
+    });
+    
+    // Date header
+    ctx.fillStyle = colors.bgLight;
+    roundRect(ctx, 40, yPos - 15, canvas.width - 80, 22, 4);
+    ctx.fill();
+    
+    ctx.font = 'bold 12px Arial';
+    ctx.fillStyle = colors.text;
+    ctx.fillText(dateStr.toUpperCase(), 50, yPos);
+    yPos += 20;
     
     items.forEach(item => {
       const itemTotal = item.unit_price * item.quantity;
       grandTotal += itemTotal;
-      content += `  - ${item.menuItem.name} x${item.quantity} = ${formatRupiah(itemTotal)}\n`;
+      
+      // Item row
+      ctx.font = '13px Arial';
+      ctx.fillStyle = colors.text;
+      const itemText = `• ${item.menuItem.name} x${item.quantity}`;
+      ctx.fillText(itemText, 60, yPos);
+      
+      // Price (right aligned)
+      ctx.fillStyle = colors.primaryDark;
+      ctx.textAlign = 'right';
+      ctx.fillText(formatRupiah(itemTotal), canvas.width - 60, yPos);
+      ctx.textAlign = 'left';
+      
+      yPos += 28;
     });
-    content += '\n';
+    
+    yPos += 10;
   });
   
-  content += `${'='.repeat(40)}\n`;
-  content += `TOTAL: ${formatRupiah(grandTotal)}\n\n`;
-  content += `-`.repeat(40) + '\n';
-  content += `PAYMENT INSTRUCTIONS\n`;
-  content += `-`.repeat(40) + '\n\n';
-  content += `Bank: ${BANK_DETAILS.bankName}\n`;
-  content += `Account Number: ${BANK_DETAILS.accountNumber}\n`;
-  content += `Account Name: ${BANK_DETAILS.accountName}\n`;
-  content += `Amount to Transfer: ${formatRupiah(grandTotal)}\n\n`;
-  content += `IMPORTANT: After making the transfer, send proof via WhatsApp:\n`;
-  content += `WhatsApp: ${BANK_DETAILS.whatsappNumber}\n`;
-  content += `Link: ${BANK_DETAILS.whatsappLink}\n\n`;
-  content += `Include your Order Number (${order.order_number}) in the message!\n`;
-  content += `${'='.repeat(40)}\n`;
-  content += `Thank you for ordering from School Cafe!\n`;
+  // Divider before total
+  ctx.strokeStyle = colors.border;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(30, yPos);
+  ctx.lineTo(canvas.width - 30, yPos);
+  ctx.stroke();
+  yPos += 20;
   
-  // Create and download file
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Order_${order.order_number}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Total Box
+  ctx.fillStyle = colors.success;
+  roundRect(ctx, 30, yPos, canvas.width - 60, 50, 8);
+  ctx.fill();
   
-  alert('Order summary downloaded! Please save this file and send payment proof via WhatsApp.');
+  ctx.font = 'bold 18px Arial';
+  ctx.fillStyle = colors.white;
+  ctx.textAlign = 'center';
+  ctx.fillText(`TOTAL: ${formatRupiah(grandTotal)}`, 250, yPos + 32);
+  yPos += 70;
+  
+  // Divider
+  ctx.strokeStyle = colors.border;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(30, yPos);
+  ctx.lineTo(canvas.width - 30, yPos);
+  ctx.stroke();
+  yPos += 20;
+  
+  // Payment Section Header
+  ctx.font = 'bold 14px Arial';
+  ctx.fillStyle = colors.primary;
+  ctx.textAlign = 'left';
+  ctx.fillText('PAYMENT DETAILS', 50, yPos);
+  yPos += 25;
+  
+  // Bank details box
+  ctx.fillStyle = colors.bgLight;
+  roundRect(ctx, 40, yPos - 10, canvas.width - 80, 85, 6);
+  ctx.fill();
+  
+  ctx.font = '12px Arial';
+  ctx.fillStyle = colors.text;
+  ctx.fillText(`Bank: ${BANK_DETAILS.bankName}`, 55, yPos + 5);
+  ctx.fillText(`Account: ${BANK_DETAILS.accountNumber}`, 55, yPos + 22);
+  ctx.fillText(`A/N: ${BANK_DETAILS.accountName}`, 55, yPos + 39);
+  ctx.fillStyle = colors.primaryDark;
+  ctx.font = 'bold 12px Arial';
+  ctx.fillText(`Amount: ${formatRupiah(grandTotal)}`, 55, yPos + 56);
+  yPos += 105;
+  
+  // WhatsApp Section
+  ctx.fillStyle = colors.whatsapp;
+  roundRect(ctx, 30, yPos, canvas.width - 60, 75, 10);
+  ctx.fill();
+  
+  ctx.font = 'bold 14px Arial';
+  ctx.fillStyle = colors.white;
+  ctx.textAlign = 'center';
+  ctx.fillText('SEND PAYMENT PROOF VIA WHATSAPP', 250, yPos + 22);
+  
+  ctx.font = 'bold 18px Arial';
+  ctx.fillText(BANK_DETAILS.whatsappNumber, 250, yPos + 48);
+  yPos += 95;
+  
+  // Footer
+  ctx.font = '11px Arial';
+  ctx.fillStyle = colors.textLight;
+  ctx.textAlign = 'center';
+  ctx.fillText('Thank you for ordering from School Cafe!', 250, yPos);
+  ctx.fillText('Include your Order Number when sending payment proof.', 250, yPos + 16);
+  
+  // Helper function to draw rounded rectangles
+  function roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+  
+  // Convert canvas to JPG and download
+  const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+  const link = document.createElement('a');
+  link.download = `Order_${order.order_number}.jpg`;
+  link.href = dataURL;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  alert('Order summary downloaded as JPG image! You can now send this image via WhatsApp as payment proof.');
 }
 
 async function seedDatabase() {
@@ -831,12 +1026,13 @@ function getItemsByDay() {
 
 function calculateWeekDates() {
   // Fixed week: August 24-28, 2026 (Monday-Friday)
+  // Using UTC to avoid timezone issues
   // Update these dates manually each week
-  const fixedWeekStart = new Date(2026, 7, 24); // August 24, 2026 (month is 0-indexed)
+  const fixedWeekStart = new Date(Date.UTC(2026, 7, 24, 0, 0, 0)); // August 24, 2026 UTC (Monday)
   
   state.weekDates = Array.from({ length: 5 }, (_, i) => {
     const date = new Date(fixedWeekStart);
-    date.setDate(fixedWeekStart.getDate() + i);
+    date.setUTCDate(fixedWeekStart.getUTCDate() + i);
     return date;
   });
 }
@@ -872,11 +1068,24 @@ function renderWeekSelector() {
   const monday = state.weekDates[0];
   const friday = state.weekDates[4];
   
+  // Format dates using UTC to avoid timezone issues
+  const mondayStr = monday.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    timeZone: 'UTC'
+  });
+  const fridayStr = friday.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
+  
   selector.innerHTML = `
     <div class="week-selector">
       <div class="week-nav">
         <div class="week-info" style="flex: 1; text-align: center;">
-          <h2 class="week-title">${ICONS.calendar} Week of ${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${friday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</h2>
+          <h2 class="week-title">${ICONS.calendar} Week of ${mondayStr} - ${fridayStr}</h2>
           <p class="week-subtitle">Select a day to order your meals</p>
         </div>
       </div>
@@ -892,7 +1101,7 @@ function renderWeekSelector() {
             <button class="day-button ${isSelected ? 'active' : ''} ${hasItems ? 'has-items' : ''}" 
                     onclick="selectDay(${index})">
               <span class="day-label">${day.label}</span>
-              <span class="day-date">${date.getDate()}</span>
+              <span class="day-date">${date.getUTCDate()}</span>
               ${hasItems || isSelected ? `<span class="day-indicator">${ICONS.check}</span>` : ''}
             </button>
           `;
@@ -1052,7 +1261,7 @@ function renderCart() {
       <div class="day-card">
         <div class="day-card-header">
           <span class="day-card-title">
-            ${ICONS.calendar} ${dayGroup.dayName}, ${new Date(dayGroup.date).toLocaleDateString()}
+            ${ICONS.calendar} ${dayGroup.dayName}, ${new Date(dayGroup.date).toLocaleDateString('en-US', {timeZone: 'UTC'})}
           </span>
           <button class="clear-day-button" onclick="clearDay('${dateKey}')">Clear Day</button>
         </div>
@@ -1132,7 +1341,7 @@ function renderOrderConfirmation() {
           
           <div class="detail-row">
             <span class="detail-label">Week:</span>
-            <span class="detail-value">${new Date(order.week_start_date).toLocaleDateString()} - ${new Date(order.week_end_date).toLocaleDateString()}</span>
+            <span class="detail-value">${new Date(order.week_start_date + 'T00:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC'})} - ${new Date(order.week_end_date + 'T00:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC'})}</span>
           </div>
           
           <div class="detail-row">
@@ -1152,7 +1361,7 @@ function renderOrderConfirmation() {
             <div class="order-summary-list">
               ${order.items.sort((a, b) => new Date(a.meal_date).getTime() - new Date(b.meal_date).getTime()).map(item => `
                 <div class="summary-item">
-                  <span>${new Date(item.meal_date).toLocaleDateString('en-US', { weekday: 'short' })} | ${item.meal_period.replace('_', ' ')} | ${item.menuItem.name} x${item.quantity}</span>
+                  <span>${new Date(item.meal_date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })} | ${item.meal_period.replace('_', ' ')} | ${item.menuItem.name} x${item.quantity}</span>
                   <span>${formatRupiah(item.unit_price * item.quantity)}</span>
                 </div>
               `).join('')}
