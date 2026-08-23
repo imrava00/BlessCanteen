@@ -9,8 +9,8 @@ async function main() {
   // ============================================
   // ⚠️  UBAH CREDENTIALS ADMIN DI SINI!
   // ============================================
-  const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'BlessCanteenAdmin';
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'BlessCanteen';
+  const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
   const ADMIN_NAME = process.env.ADMIN_NAME || 'Administrator Bless Canteen';
   // ============================================
   

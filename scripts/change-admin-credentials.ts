@@ -14,8 +14,8 @@ import { hash } from 'bcryptjs';
 const prisma = new PrismaClient();
 
 // Default values
-let newUsername = 'admin';
-let newPassword = 'admin123';
+let newUsername = 'BlessCanteenAdmin';
+let newPassword = '231200Imanuel';
 
 // Parse command line arguments
 const args = process.argv.slice(2);
