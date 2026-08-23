@@ -4,25 +4,47 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bless Canteen - Weekly Meal Ordering</title>
+  <meta name="description" content="Order fresh, nutritious meals for the week at Bless Canteen. Plan your entire week of delicious meals in advance!">
+  
+  <!-- Google Fonts - Inter for modern typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
   <link rel="stylesheet" href="/static/css/styles.css">
-  <link rel="stylesheet" href="/static/css/icons.css">
 </head>
 <body>
-  <!-- Header -->
+  <!-- Sticky Header with Glass Effect -->
   <header class="header" id="header">
     <!-- Rendered by JavaScript -->
   </header>
 
-  <!-- Main Content -->
+  <!-- Main Content Area -->
   <main class="main-content">
     <div class="container">
-      <!-- Hero Section -->
-      <section class="hero-section">
-        <h1 class="hero-title">Weekly Menu</h1>
+      
+      <!-- Hero Section - Warm Welcome -->
+      <section class="hero-section animate-fadeInUp">
+        <h1 class="hero-title">Delicious Meals, Ordered Weekly</h1>
         <p class="hero-subtitle">
-          Order fresh, nutritious meals prepared daily by our school kitchen.
-          Plan your entire week of meals in one session!
+          Fresh, nutritious meals prepared daily by our school kitchen. 
+          Plan your entire week of meals in one session and never worry about lunch again!
         </p>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="hero-stat-value">5</span>
+            <span class="hero-stat-label">Days/Week</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">Fresh</span>
+            <span class="hero-stat-label">Daily Prep</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">Easy</span>
+            <span class="hero-stat-label">Pre-Order</span>
+          </div>
+        </div>
       </section>
 
       <!-- Week Selector & Day Picker -->
@@ -30,33 +52,35 @@
         <!-- Rendered by JavaScript -->
       </section>
 
-      <!-- Meal Period Tabs -->
+      <!-- Selected Day Info Banner -->
       <section id="meal-period-tabs">
         <!-- Rendered by JavaScript -->
       </section>
 
-      <!-- Search and Category Filters -->
+      <!-- Search Bar & Category Filters -->
       <section id="search-filters">
         <!-- Rendered by JavaScript -->
       </section>
 
-      <!-- Menu Grid -->
-      <section id="menu-grid">
+      <!-- Menu Grid - Food Cards -->
+      <section id="menu-grid" class="stagger-children">
         <!-- Rendered by JavaScript -->
       </section>
+      
     </div>
   </main>
 
-  <!-- Cart Sidebar -->
+  <!-- Cart Overlay (Backdrop) -->
   <div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
+  
+  <!-- Cart Sidebar - Slide-in Panel -->
   <aside class="cart-sidebar" id="cart-sidebar">
     <div class="cart-header">
       <h2 class="cart-title" id="cart-title">
         <!-- Rendered by JavaScript -->
       </h2>
-      <button class="cart-close" onclick="toggleCart()">
-        <!-- Close icon SVG -->
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button class="cart-close" onclick="toggleCart()" aria-label="Close cart">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -84,7 +108,7 @@
     <!-- Rendered by JavaScript -->
   </footer>
 
-  <!-- JavaScript -->
+  <!-- Main Application JavaScript -->
   <script src="/static/js/app.js"></script>
 </body>
 </html>

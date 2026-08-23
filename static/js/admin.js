@@ -242,15 +242,15 @@ function renderMenuItems(items) {
             
             <div class="menu-item-status">
                 <span class="status-badge ${item.is_available ? 'available' : 'unavailable'}">
-                    ${item.is_available ? '✓ Available' : '✗ Unavailable'}
+                    ${item.is_available ? '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Available' : '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>Unavailable'}
                 </span>
                 
                 <div class="menu-item-actions">
                     <button class="btn-icon btn-edit" onclick="editMenuItem('${item.id}')" title="Edit">
-                        ✏️
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
                     <button class="btn-icon btn-delete" onclick="deleteMenuItem('${item.id}', '${escapeHtml(item.name)}')" title="Delete">
-                        🗑️
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                     </button>
                 </div>
             </div>
@@ -480,7 +480,7 @@ function renderOrdersTable(orders) {
             <td>${formatDate(order.created_at)}</td>
             <td>
                 <button class="btn-icon btn-edit" onclick="viewOrderDetails('${order.id}')" title="View Details">
-                    👁️
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 </button>
             </td>
         </tr>

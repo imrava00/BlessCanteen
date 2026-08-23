@@ -1,10 +1,11 @@
 /**
- * Bless Canteen - Weekly Meal Ordering System
- * Frontend JavaScript - Beautiful Custom SVG Icons
- * Payment Proof Upload for BCA Bank Transfer
+ * Bless Canteen - Premium Weekly Meal Ordering System
+ * Frontend JavaScript - Modern Food App Design
+ * Warm color scheme with professional aesthetics
+ * Payment via BCA Bank Transfer + WhatsApp Confirmation
  */
 
-// ============ State Management ============
+// ============ STATE MANAGEMENT ============
 const state = {
   menuItems: [],
   categories: [],
@@ -18,10 +19,11 @@ const state = {
   showOrderConfirm: false,
   showPaymentModal: false,
   orderSuccess: null,
-  uploadedFile: null
+  uploadedFile: null,
+  selectedCategory: 'all'
 };
 
-// ============ Constants ============
+// ============ CONSTANTS ============
 const DAYS_OF_WEEK = [
   { key: 'monday', label: 'Mon', fullLabel: 'Monday' },
   { key: 'tuesday', label: 'Tue', fullLabel: 'Tuesday' },
@@ -29,8 +31,6 @@ const DAYS_OF_WEEK = [
   { key: 'thursday', label: 'Thu', fullLabel: 'Thursday' },
   { key: 'friday', label: 'Fri', fullLabel: 'Friday' }
 ];
-
-// Meal periods removed - simplified ordering system
 
 // BCA Bank Details for Payment - WhatsApp Confirmation
 const BANK_DETAILS = {
@@ -48,12 +48,10 @@ const BANK_DETAILS = {
   ]
 };
 
-// ============ Utility Functions ============
+// ============ UTILITY FUNCTIONS ============
 
 /**
  * Format number as Indonesian Rupiah
- * @param {number} amount - The amount to format
- * @returns {string} Formatted Rupiah string (e.g., "Rp 15.000")
  */
 function formatRupiah(amount) {
   if (!amount && amount !== 0) return 'Rp 0';
@@ -77,7 +75,6 @@ function getMonday(date) {
 }
 
 function formatDate(date) {
-  // Use UTC methods to ensure consistent date formatting across timezones
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
   const day = String(date.getUTCDate()).padStart(2, '0');
@@ -85,7 +82,6 @@ function formatDate(date) {
 }
 
 function formatDisplayDate(date) {
-  // Use UTC methods for consistent weekday display
   const options = { 
     weekday: 'long', 
     month: 'long', 
@@ -99,23 +95,23 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
-// ============ BEAUTIFUL CUSTOM SVG ICONS ============
-// Each icon is carefully designed with modern aesthetics
+// ============ PREMIUM SVG ICONS ============
+// Warm orange/amber themed icons for food app aesthetic
 
 const ICONS = {
-  // Logo - Elegant Chef Hat with Star
+  // Logo - Elegant Chef Hat with Star (Orange Theme)
   logo: `<svg class="icon icon-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#3b82f6"/>
-        <stop offset="100%" style="stop-color:#1d4ed8"/>
+        <stop offset="0%" style="stop-color:#f97316"/>
+        <stop offset="100%" style="stop-color:#c2410c"/>
       </linearGradient>
     </defs>
     <circle cx="24" cy="24" r="22" fill="url(#logoGrad)"/>
     <path d="M24 10c-4.4 0-8 3.2-8 7.2 0 2.4 1.2 4.5 3 5.9V28h10v-4.9c1.8-1.4 3-3.5 3-5.9 0-4-3.6-7.2-8-7.2z" fill="white"/>
     <rect x="18" y="28" width="12" height="3" rx="1" fill="white"/>
     <rect x="16" y="31" width="16" height="2" rx="1" fill="white" opacity="0.8"/>
-    <path d="M21 17l2 2 4-4" stroke="#1d4ed8" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M21 17l2 2 4-4" stroke="#c2410c" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="24" cy="38" r="2" fill="#fbbf24"/>
     <circle cx="18" cy="40" r="1.5" fill="#fbbf24" opacity="0.7"/>
     <circle cx="30" cy="40" r="1.5" fill="#fbbf24" opacity="0.7"/>
@@ -123,40 +119,27 @@ const ICONS = {
 
   // Search - Modern Magnifying Glass
   search: `<svg class="icon icon-search" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="searchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#6b7280"/>
-        <stop offset="100%" style="stop-color:#374151"/>
-      </linearGradient>
-    </defs>
-    <circle cx="10.5" cy="10.5" r="7" stroke="url(#searchGrad)" stroke-width="2.5" fill="none"/>
-    <line x1="15.5" y1="15.5" x2="20.5" y2="20.5" stroke="url(#searchGrad)" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="8" cy="9" r="1.5" fill="#94a3b8"/>
+    <circle cx="10.5" cy="10.5" r="7" stroke="#f97316" stroke-width="2.5" fill="none"/>
+    <line x1="15.5" y1="15.5" x2="20.5" y2="20.5" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
   </svg>`,
 
   // Cart - Shopping Cart with Items
   cart: `<svg class="icon icon-cart" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="cartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#3b82f6"/>
-        <stop offset="100%" style="stop-color:#2563eb"/>
+        <stop offset="0%" style="stop-color:#f97316"/>
+        <stop offset="100%" style="stop-color:#ea580c"/>
       </linearGradient>
     </defs>
     <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" stroke="url(#cartGrad)" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="9" cy="20" r="1.5" fill="#3b82f6"/>
-    <circle cx="18" cy="20" r="1.5" fill="#3b82f6"/>
-    <path d="M10 10h4l1 4H9" stroke="#60a5fa" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <circle cx="9" cy="20" r="1.5" fill="#f97316"/>
+    <circle cx="18" cy="20" r="1.5" fill="#f97316"/>
+    <path d="M10 10h4l1 4H9" stroke="#fb923c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
   </svg>`,
 
-  // Plus - Circular Add Button
+  // Plus - Circular Add Button (Green)
   plus: `<svg class="icon icon-plus" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="plusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#10b981"/>
-        <stop offset="100%" style="stop-color:#059669"/>
-      </linearGradient>
-    </defs>
-    <circle cx="12" cy="12" r="10" fill="url(#plusGrad)"/>
+    <circle cx="12" cy="12" r="10" fill="#22c55e"/>
     <line x1="12" y1="7" x2="12" y2="17" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
     <line x1="7" y1="12" x2="17" y2="12" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
   </svg>`,
@@ -184,33 +167,33 @@ const ICONS = {
 
   // Close - X Button
   close: `<svg class="icon icon-close" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="12" cy="12" r="10" fill="#f1f5f9"/>
-    <line x1="8" y1="8" x2="16" y2="16" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>
-    <line x1="16" y1="8" x2="8" y2="16" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="12" cy="12" r="10" fill="#f5f5f4"/>
+    <line x1="8" y1="8" x2="16" y2="16" stroke="#78716c" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="16" y1="8" x2="8" y2="16" stroke="#78716c" stroke-width="2.5" stroke-linecap="round"/>
   </svg>`,
 
   // Chevron Left - Navigation Arrow
   chevronLeft: `<svg class="icon icon-chevron-left" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="12" cy="12" r="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-    <polyline points="14,7 9,12 14,17" stroke="#3b82f6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="12" cy="12" r="10" fill="#fafaf9" stroke="#e7e5e4" stroke-width="1"/>
+    <polyline points="14,7 9,12 14,17" stroke="#f97316" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`,
 
   // Chevron Right - Navigation Arrow
   chevronRight: `<svg class="icon icon-chevron-right" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="12" cy="12" r="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-    <polyline points="10,7 15,12 10,17" stroke="#3b82f6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="12" cy="12" r="10" fill="#fafaf9" stroke="#e7e5e4" stroke-width="1"/>
+    <polyline points="10,7 15,12 10,17" stroke="#f97316" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`,
 
   // Calendar - Weekly Planner Style
   calendar: `<svg class="icon icon-calendar" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="calGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#8b5cf6"/>
-        <stop offset="100%" style="stop-color:#7c3aed"/>
+        <stop offset="0%" style="stop-color:#f97316"/>
+        <stop offset="100%" style="stop-color:#ea580c"/>
       </linearGradient>
     </defs>
     <rect x="3" y="4" width="18" height="17" rx="3" fill="url(#calGrad)"/>
-    <rect x="3" y="4" width="18" height="5" rx="3" fill="#7c3aed"/>
+    <rect x="3" y="4" width="18" height="5" rx="3" fill="#ea580c"/>
     <line x1="8" y1="2" x2="8" y2="6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
     <line x1="16" y1="2" x2="16" y2="6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
     <rect x="6" y="12" width="3" height="3" rx="0.5" fill="white" opacity="0.9"/>
@@ -221,77 +204,47 @@ const ICONS = {
 
   // Breakfast - Sun with Egg & Coffee Cup
   breakfast: `<svg class="icon icon-breakfast" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#fbbf24"/>
-        <stop offset="100%" style="stop-color:#f59e0b"/>
-      </linearGradient>
-    </defs>
-    <!-- Sun rays -->
-    <g stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round">
+    <g stroke="#eab308" stroke-width="1.5" stroke-linecap="round">
       <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
       <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
       <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
       <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
     </g>
-    <!-- Main sun circle -->
-    <circle cx="12" cy="12" r="5" fill="url(#sunGrad)"/>
-    <!-- Coffee cup -->
-    <path d="M16 16h2a2 2 0 0 1 0 4h-2" stroke="#78350f" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <path d="M7 16h9v3a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z" fill="#fef3c7" stroke="#d97706" stroke-width="1"/>
-    <!-- Steam -->
+    <circle cx="12" cy="12" r="5" fill="#fbbf24"/>
+    <path d="M16 16h2a2 2 0 0 1 0 4h-2" stroke="#92400e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M7 16h9v3a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z" fill="#fefce8" stroke="#ca8a04" stroke-width="1"/>
     <path d="M9 14c0-.5.3-1 .5-1.2M11.5 14c0-.5.3-1 .5-1.2M14 14c0-.5.3-1 .5-1.2" stroke="#d1d5db" stroke-width="1" stroke-linecap="round" fill="none"/>
   </svg>`,
 
   // Lunch - Plate with Utensils
   lunch: `<svg class="icon icon-lunch" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="plateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#ea580c"/>
-        <stop offset="100%" style="stop-color:#c2410c"/>
-      </linearGradient>
-    </defs>
-    <!-- Plate -->
-    <ellipse cx="12" cy="14" rx="9" ry="5" fill="#fff7ed" stroke="url(#plateGrad)" stroke-width="1.5"/>
+    <ellipse cx="12" cy="14" rx="9" ry="5" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
     <ellipse cx="12" cy="14" rx="6" ry="3" fill="none" stroke="#fed7aa" stroke-width="1"/>
-    <!-- Fork left -->
     <g transform="translate(2, 6)">
       <line x1="2" y1="0" x2="2" y2="12" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
       <line x1="2" y1="3" x2="0" y2="1" stroke="#ea580c" stroke-width="1.2" stroke-linecap="round"/>
       <line x1="2" y1="6" x2="0" y2="4" stroke="#ea580c" stroke-width="1.2" stroke-linecap="round"/>
       <line x1="2" y1="9" x2="0" y2="7" stroke="#ea580c" stroke-width="1.2" stroke-linecap="round"/>
     </g>
-    <!-- Knife right -->
     <g transform="translate(19, 5)">
       <line x1="1" y1="0" x2="1" y2="13" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
       <path d="M1 0L-1 4h4L1 0z" fill="#ea580c"/>
     </g>
-    <!-- Food on plate -->
     <circle cx="10" cy="13.5" r="1.5" fill="#22c55e" opacity="0.8"/>
     <circle cx="13" cy="14" r="1" fill="#ef4444" opacity="0.7"/>
-    <circle cx="11.5" cy="15" r="0.8" fill="#fbbf24" opacity="0.8"/>
+    <circle cx="11.5" cy="15" r="0.8" fill="#eab308" opacity="0.8"/>
   </svg>`,
 
   // Snack - Cookie with Chocolate Chips
   snack: `<svg class="icon icon-snack" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="cookieGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#ec4899"/>
-        <stop offset="100%" style="stop-color:#db2777"/>
-      </linearGradient>
-    </defs>
-    <!-- Cookie base -->
     <circle cx="12" cy="12" r="9" fill="#fef3c7" stroke="#fcd34d" stroke-width="1"/>
-    <!-- Chocolate chips -->
     <circle cx="8" cy="9" r="1.8" fill="#78350f"/>
     <circle cx="15" cy="8" r="1.5" fill="#78350f"/>
     <circle cx="16" cy="14" r="1.6" fill="#78350f"/>
     <circle cx="10" cy="15" r="1.4" fill="#78350f"/>
     <circle cx="7" cy="13" r="1.2" fill="#78350f"/>
     <circle cx="13" cy="11" r="1.3" fill="#78350f"/>
-    <!-- Bite mark -->
     <path d="M19 8a7 7 0 0 0-2 4" stroke="#fde68a" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <!-- Crumbs -->
     <circle cx="3" cy="16" r="0.8" fill="#fcd34d"/>
     <circle cx="20" cy="18" r="0.6" fill="#fcd34d"/>
   </svg>`,
@@ -306,8 +259,8 @@ const ICONS = {
   clock: `<svg class="icon icon-clock" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="clockGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#06b6d4"/>
-        <stop offset="100%" style="stop-color:#0891b2"/>
+        <stop offset="0%" style="stop-color:#f97316"/>
+        <stop offset="100%" style="stop-color:#ea580c"/>
       </linearGradient>
     </defs>
     <circle cx="12" cy="12" r="10" fill="url(#clockGrad)"/>
@@ -331,7 +284,6 @@ const ICONS = {
     <circle cx="24" cy="24" r="22" fill="url(#successGrad)" filter="url(#glow)"/>
     <circle cx="24" cy="24" r="16" fill="none" stroke="white" stroke-width="2" opacity="0.3"/>
     <polyline points="14,25 21,32 35,17" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <!-- Sparkles -->
     <circle cx="38" cy="10" r="2" fill="#fbbf24"/>
     <circle cx="8" cy="12" r="1.5" fill="#fbbf24"/>
     <circle cx="10" cy="38" r="1.5" fill="#fbbf24"/>
@@ -341,8 +293,8 @@ const ICONS = {
   arrowRight: `<svg class="icon icon-arrow-right" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" style="stop-color:#3b82f6"/>
-        <stop offset="100%" style="stop-color:#2563eb"/>
+        <stop offset="0%" style="stop-color:#22c55e"/>
+        <stop offset="100%" style="stop-color:#16a34a"/>
       </linearGradient>
     </defs>
     <circle cx="12" cy="12" r="10" fill="url(#arrowGrad)"/>
@@ -354,48 +306,44 @@ const ICONS = {
   package: `<svg class="icon icon-package" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="boxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#e2e8f0"/>
-        <stop offset="100%" style="stop-color:#cbd5e1"/>
+        <stop offset="0%" style="stop-color:#e7e5e4"/>
+        <stop offset="100%" style="stop-color:#d6d3d1"/>
       </linearGradient>
     </defs>
-    <!-- Box body -->
-    <path d="M8 20h48v30a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V20z" fill="url(#boxGrad)" stroke="#94a3b8" stroke-width="1.5"/>
-    <!-- Box top -->
-    <path d="M8 20l24-12 24 12H8z" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" stroke-linejoin="round"/>
-    <!-- Tape -->
-    <rect x="28" y="14" width="8" height="12" fill="#3b82f6" opacity="0.6"/>
-    <rect x="26" y="28" width="12" height="18" rx="1" fill="#3b82f6" opacity="0.15"/>
-    <!-- Flaps -->
-    <path d="M8 20L4 24v26l4-4" stroke="#94a3b8" stroke-width="1" fill="none"/>
-    <path d="M56 20l4 4v26-4-22" stroke="#94a3b8" stroke-width="1" fill="none"/>
+    <path d="M8 20h48v30a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V20z" fill="url(#boxGrad)" stroke="#a8a29e" stroke-width="1.5"/>
+    <path d="M8 20l24-12 24 12H8z" fill="#fafaf9" stroke="#a8a29e" stroke-width="1.5" stroke-linejoin="round"/>
+    <rect x="28" y="14" width="8" height="12" fill="#f97316" opacity="0.6"/>
+    <rect x="26" y="28" width="12" height="18" rx="1" fill="#f97316" opacity="0.15"/>
+    <path d="M8 20L4 24v26l4-4" stroke="#a8a29e" stroke-width="1" fill="none"/>
+    <path d="M56 20l4 4v26-4-22" stroke="#a8a29e" stroke-width="1" fill="none"/>
   </svg>`,
 
   // Upload - File Upload Icon
   upload: `<svg class="icon icon-upload" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="uploadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#3b82f6"/>
-        <stop offset="100%" style="stop-color:#1d4ed8"/>
+        <stop offset="0%" style="stop-color:#f97316"/>
+        <stop offset="100%" style="stop-color:#ea580c"/>
       </linearGradient>
     </defs>
     <path d="M4 16v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke="url(#uploadGrad)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <polyline points="8,12 12,8 16,12" stroke="url(#uploadGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <line x1="12" y1="8" x2="12" y2="16" stroke="url(#uploadGrad)" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="12" cy="20" r="1" fill="#3b82f6"/>
+    <circle cx="12" cy="20" r="1" fill="#f97316"/>
   </svg>`,
 
   // Download - File Download Icon
   download: `<svg class="icon icon-download" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="downloadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#10b981"/>
-        <stop offset="100%" style="stop-color:#059669"/>
+        <stop offset="0%" style="stop-color:#22c55e"/>
+        <stop offset="100%" style="stop-color:#16a34a"/>
       </linearGradient>
     </defs>
     <path d="M4 16v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke="url(#downloadGrad)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <polyline points="8,12 12,16 16,12" stroke="url(#downloadGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     <line x1="12" y1="4" x2="12" y2="16" stroke="url(#downloadGrad)" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="12" cy="20" r="1" fill="#10b981"/>
+    <circle cx="12" cy="20" r="1" fill="#22c55e"/>
   </svg>`,
 
   // WhatsApp Icon
@@ -414,23 +362,17 @@ const ICONS = {
   bank: `<svg class="icon icon-bank" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="bankGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-        <stop offset="0%" style="stop-color:#1e40af"/>
-        <stop offset="100%" style="stop-color:#3b82f6"/>
+        <stop offset="0%" style="stop-color:#ea580c"/>
+        <stop offset="100%" style="stop-color:#f97316"/>
       </linearGradient>
     </defs>
-    <!-- Roof triangle -->
     <path d="M12 2L2 8h20L12 2z" fill="url(#bankGrad)"/>
-    <!-- Building columns -->
-    <rect x="4" y="8" width="16" height="12" rx="1" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
-    <!-- Columns -->
-    <line x1="8" y1="8" x2="8" y2="20" stroke="#3b82f6" stroke-width="1.5"/>
-    <line x1="12" y1="8" x2="12" y2="20" stroke="#3b82f6" stroke-width="1.5"/>
-    <line x1="16" y1="8" x2="16" y2="20" stroke="#3b82f6" stroke-width="1.5"/>
-    <!-- Base -->
-    <rect x="2" y="20" width="20" height="2" rx="0.5" fill="#1e40af"/>
-    <!-- Door -->
-    <rect x="10" y="15" width="4" height="5" rx="1" fill="#1e40af"/>
-    <!-- Dollar sign -->
+    <rect x="4" y="8" width="16" height="12" rx="1" fill="#fff7ed" stroke="#f97316" stroke-width="1"/>
+    <line x1="8" y1="8" x2="8" y2="20" stroke="#f97316" stroke-width="1.5"/>
+    <line x1="12" y1="8" x2="12" y2="20" stroke="#f97316" stroke-width="1.5"/>
+    <line x1="16" y1="8" x2="16" y2="20" stroke="#f97316" stroke-width="1.5"/>
+    <rect x="2" y="20" width="20" height="2" rx="0.5" fill="#c2410c"/>
+    <rect x="10" y="15" width="4" height="5" rx="1" fill="#c2410c"/>
     <text x="12" y="17.5" text-anchor="middle" fill="#fbbf24" font-size="4" font-weight="bold">$</text>
   </svg>`,
 
@@ -440,45 +382,40 @@ const ICONS = {
   sunCategory: `<svg class="icon category-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="breakCatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#fbbf24"/>
-        <stop offset="100%" style="stop-color:#f59e0b"/>
+        <stop offset="0%" style="stop-color:#eab308"/>
+        <stop offset="100%" style="stop-color:#ca8a04"/>
       </linearGradient>
     </defs>
-    <circle cx="16" cy="16" r="14" fill="#fef3c7" stroke="url(#breakCatGrad)" stroke-width="2"/>
-    <!-- Sun rays inside -->
-    <g stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round">
+    <circle cx="16" cy="16" r="14" fill="#fefce8" stroke="url(#breakCatGrad)" stroke-width="2"/>
+    <g stroke="#eab308" stroke-width="1.5" stroke-linecap="round">
       <line x1="16" y1="5" x2="16" y2="8"/><line x1="16" y1="24" x2="16" y2="27"/>
       <line x1="7" y1="16" x2="10" y2="16"/><line x1="22" y1="16" x2="25" y2="16"/>
       <line x1="9.5" y1="9.5" x2="11.7" y2="11.7"/><line x1="20.3" y1="20.3" x2="22.5" y2="22.5"/>
       <line x1="22.5" y1="9.5" x2="20.3" y2="11.7"/><line x1="11.7" y1="20.3" x2="9.5" y2="22.5"/>
     </g>
-    <!-- Egg in center -->
-    <ellipse cx="16" cy="17" rx="5" ry="4" fill="white" stroke="#fcd34d" stroke-width="1"/>
-    <circle cx="16" cy="17" r="2" fill="#fbbf24"/>
+    <ellipse cx="16" cy="17" rx="5" ry="4" fill="white" stroke="#fde047" stroke-width="1"/>
+    <circle cx="16" cy="17" r="2" fill="#eab308"/>
   </svg>`,
 
   // Main Courses Category - Chef Plate
   utensilsCategory: `<svg class="icon category-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="mainCatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#ea580c"/>
-        <stop offset="100%" style="stop-color:#c2410c"/>
+        <stop offset="0%" style="stop-color:#f97316"/>
+        <stop offset="100%" style="stop-color:#ea580c"/>
       </linearGradient>
     </defs>
     <circle cx="16" cy="16" r="14" fill="#fff7ed" stroke="url(#mainCatGrad)" stroke-width="2"/>
-    <!-- Plate -->
     <ellipse cx="16" cy="18" rx="9" ry="5" fill="white" stroke="#fed7aa" stroke-width="1"/>
-    <!-- Food items -->
     <circle cx="13" cy="17" r="2" fill="#22c55e"/>
     <circle cx="18" cy="18" r="1.5" fill="#ef4444"/>
-    <circle cx="15" cy="20" r="1.2" fill="#fbbf24"/>
-    <!-- Utensils crossed -->
+    <circle cx="15" cy="20" r="1.2" fill="#eab308"/>
     <g transform="translate(10, 6) rotate(-45)">
-      <ellipse cx="3" cy="6" rx="1.5" ry="5" fill="#ea580c"/>
-      <rect x="2.5" y="0" width="1" height="6" rx="0.5" fill="#ea580c"/>
+      <ellipse cx="3" cy="6" rx="1.5" ry="5" fill="#f97316"/>
+      <rect x="2.5" y="0" width="1" height="6" rx="0.5" fill="#f97316"/>
     </g>
     <g transform="translate(18, 8) rotate(45)">
-      <path d="M0 0 L2 0 L2 8 C2 9 1 10 0 10 Z" fill="#ea580c"/>
+      <path d="M0 0 L2 0 L2 8 C2 9 1 10 0 10 Z" fill="#f97316"/>
     </g>
   </svg>`,
 
@@ -491,16 +428,13 @@ const ICONS = {
       </linearGradient>
     </defs>
     <circle cx="16" cy="16" r="14" fill="#fdf2f8" stroke="url(#snackCatGrad)" stroke-width="2"/>
-    <!-- Big cookie -->
     <circle cx="16" cy="17" r="9" fill="#fef3c7" stroke="#fcd34d" stroke-width="1.5"/>
-    <!-- Chips -->
     <circle cx="11" cy="14" r="2.2" fill="#78350f"/>
     <circle cx="20" cy="13" r="1.8" fill="#78350f"/>
     <circle cx="21" cy="20" r="2" fill="#78350f"/>
     <circle cx="13" cy="21" r="1.6" fill="#78350f"/>
     <circle cx="9" cy="19" r="1.4" fill="#78350f"/>
     <circle cx="17" cy="16" r="1.7" fill="#78350f"/>
-    <!-- Crumb -->
     <circle cx="25" cy="10" r="1" fill="#fcd34d"/>
   </svg>`,
 
@@ -513,15 +447,10 @@ const ICONS = {
       </linearGradient>
     </defs>
     <circle cx="16" cy="16" r="14" fill="#ecfeff" stroke="url(#drinkCatGrad)" stroke-width="2"/>
-    <!-- Cup body -->
     <path d="M9 12h10v10a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3V12z" fill="#cffafe" stroke="#0891b2" stroke-width="1.5"/>
-    <!-- Handle -->
     <path d="M19 15h2a2.5 2.5 0 0 1 0 5h-2" stroke="#0891b2" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <!-- Liquid -->
     <path d="M10 16h8v5a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-5z" fill="#22d3ee" opacity="0.6"/>
-    <!-- Straw -->
     <line x1="14" y1="8" x2="14" y2="14" stroke="#0891b2" stroke-width="2" stroke-linecap="round"/>
-    <!-- Bubble -->
     <circle cx="12" cy="19" r="1" fill="white" opacity="0.8"/>
     <circle cx="15" cy="20" r="0.7" fill="white" opacity="0.6"/>
   </svg>`,
@@ -535,14 +464,10 @@ const ICONS = {
       </linearGradient>
     </defs>
     <circle cx="16" cy="16" r="14" fill="#f0fdf4" stroke="url(#healthCatGrad)" stroke-width="2"/>
-    <!-- Leaf shape -->
     <path d="M16 6c-4 0-8 4-8 10s4 10 8 10c-2-3-3-6-3-10s1-7 3-10z" fill="url(#healthCatGrad)"/>
     <path d="M16 6c4 0 8 4 8 10s-4 10-8 10c2-3 3-6 3-10s-1-7-3-10z" fill="#86efac"/>
-    <!-- Vein -->
     <path d="M16 6v20" stroke="#15803d" stroke-width="1" fill="none"/>
-    <!-- Side veins -->
     <path d="M16 12c2-1 4-1 5 0M16 16c2-1 4-1 5 0M16 20c2-1 3-1 4 0" stroke="#15803d" stroke-width="0.8" fill="none"/>
-    <!-- Dew drop -->
     <circle cx="20" cy="10" r="1.5" fill="#86efac" opacity="0.8"/>
   </svg>`,
 
@@ -555,18 +480,13 @@ const ICONS = {
       </linearGradient>
     </defs>
     <circle cx="16" cy="16" r="14" fill="#faf5ff" stroke="url(#dessertCatGrad)" stroke-width="2"/>
-    <!-- Cake slice -->
     <path d="M8 18 L16 12 L24 18 L24 26 L8 26 Z" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.5" stroke-linejoin="round"/>
-    <!-- Frosting -->
     <path d="M8 18 Q12 15 16 18 Q20 15 24 18" fill="#faf5ff" stroke="#c084fc" stroke-width="1.5"/>
-    <!-- Cherry on top -->
     <circle cx="16" cy="14" r="2.5" fill="#ef4444"/>
     <path d="M16 11.5 Q17 9 16 8" stroke="#dc2626" stroke-width="1" fill="none" stroke-linecap="round"/>
-    <!-- Sprinkles -->
     <circle cx="11" cy="21" r="1" fill="#fbbf24"/>
     <circle cx="20" cy="22" r="1" fill="#3b82f6"/>
     <circle cx="15" cy="23" r="0.8" fill="#ec4899"/>
-    <!-- Layers -->
     <line x1="10" y1="22" x2="22" y2="22" stroke="#e9d5ff" stroke-width="1"/>
   </svg>`
 };
@@ -591,7 +511,7 @@ const FOOD_ICONS = {
   'Desserts': ICONS.cakeCategory
 };
 
-// ============ API Functions ============
+// ============ API FUNCTIONS ============
 
 async function fetchMenu(category = 'all', search = '') {
   try {
@@ -599,10 +519,8 @@ async function fetchMenu(category = 'all', search = '') {
     if (category !== 'all') params.set('category', category);
     if (search) params.set('search', search);
     
-    // Add day of week parameter for daily menu filtering
-    // Day mapping: Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5
     if (state.selectedDayIndex !== undefined && state.selectedDayIndex !== null) {
-      params.set('day', state.selectedDayIndex + 1); // Convert 0-based to 1-based
+      params.set('day', state.selectedDayIndex + 1);
     }
     
     const response = await fetch(`/api/menu?${params}`);
@@ -632,7 +550,7 @@ async function placeOrder() {
         menuItemId: item.menuItemId,
         quantity: item.quantity,
         mealDate: formatDate(item.mealDate),
-        mealPeriod: 'lunch'  // Default to lunch for compatibility
+        mealPeriod: 'lunch'
       })),
       notes: `Weekly order`
     };
@@ -648,7 +566,7 @@ async function placeOrder() {
     if (data.success) {
       state.orderSuccess = data.data;
       state.showOrderConfirm = true;
-      state.showPaymentModal = true; // Show payment modal after order
+      state.showPaymentModal = true;
       state.cart = [];
       state.showCart = false;
       updateUI();
@@ -665,18 +583,14 @@ async function placeOrder() {
 }
 
 async function uploadPaymentProof(orderId) {
-  // Upload disabled - using WhatsApp confirmation now
   alert('Payment proof should be sent via WhatsApp to +628129524242');
 }
 
 function downloadOrderSummary(order) {
-  // Create canvas for JPG generation
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   
-  // Helper function to get price from item (handle different data structures)
   function getItemPrice(item) {
-    // Try different possible price locations
     if (item.unit_price && item.unit_price > 0) return parseFloat(item.unit_price);
     if (item.total_price && item.quantity) return parseFloat(item.total_price) / parseInt(item.quantity);
     if (item.menuItem && item.menuItem.price) return parseFloat(item.menuItem.price);
@@ -684,43 +598,38 @@ function downloadOrderSummary(order) {
     return 0;
   }
   
-  // Helper function to get item name
   function getItemName(item) {
     if (item.menuItem && item.menuItem.name) return item.menuItem.name;
     if (item.name) return item.name;
     return 'Unknown Item';
   }
   
-  // Canvas dimensions (receipt-style)
   canvas.width = 500;
   
-  // Calculate height based on content - with better spacing
   const itemCount = order.items ? order.items.length : 0;
   const baseHeight = 550;
-  const itemHeight = itemCount * 50; // More space per item
-  const extraHeight = 180; // For WhatsApp section
+  const itemHeight = itemCount * 50;
+  const extraHeight = 180;
   canvas.height = baseHeight + itemHeight + extraHeight;
   
-  // Colors
   const colors = {
-    primary: '#2563eb',
-    primaryDark: '#1d4ed8',
-    text: '#1f2937',
-    textLight: '#6b7280',
+    primary: '#f97316',
+    primaryDark: '#ea580c',
+    text: '#292524',
+    textLight: '#78716c',
     white: '#ffffff',
-    bgLight: '#f8fafc',
-    border: '#e2e8f0',
-    success: '#10b981',
+    bgLight: '#fafaf9',
+    border: '#e7e5e4',
+    success: '#22c55e',
     whatsapp: '#25D366'
   };
   
   let yPos = 25;
   
-  // Background
   ctx.fillStyle = colors.white;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // Header background with gradient effect
+  // Header background - Orange gradient
   ctx.fillStyle = colors.primary;
   roundRect(ctx, 0, 0, canvas.width, 90, 0);
   ctx.fill();
@@ -734,14 +643,12 @@ function downloadOrderSummary(order) {
   ctx.lineWidth = 2;
   ctx.stroke();
   
-  // Logo text "SC"
   ctx.font = 'bold 18px Arial';
   ctx.fillStyle = colors.primary;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('BC', 250, 46);
   
-  // Title
   ctx.font = 'bold 22px Arial';
   ctx.fillStyle = colors.white;
   ctx.fillText('BLESS CANTEEN', 250, 78);
@@ -761,7 +668,6 @@ function downloadOrderSummary(order) {
   
   yPos += 55;
   
-  // Date and info section
   ctx.font = '12px Arial';
   ctx.fillStyle = colors.textLight;
   ctx.textAlign = 'left';
@@ -778,7 +684,6 @@ function downloadOrderSummary(order) {
   ctx.fillText(`Date: ${orderDate}`, 45, yPos);
   yPos += 18;
   
-  // Format week dates
   if (order.week_start_date && order.week_end_date) {
     const weekStart = new Date(order.week_start_date + 'T00:00:00Z');
     const weekEnd = new Date(order.week_end_date + 'T00:00:00Z');
@@ -790,17 +695,14 @@ function downloadOrderSummary(order) {
   ctx.fillText(`Status: ${(order.status || 'pending').toUpperCase()}`, 45, yPos);
   yPos += 30;
   
-  // Divider
   drawDivider(ctx, 30, yPos, canvas.width - 30, colors.border);
   yPos += 15;
   
-  // Section Title - ORDER DETAILS
   ctx.font = 'bold 14px Arial';
   ctx.fillStyle = colors.primary;
   ctx.fillText('ORDER DETAILS', 45, yPos);
   yPos += 22;
   
-  // Group items by date
   const itemsByDate = {};
   if (order.items) {
     order.items.forEach(item => {
@@ -823,7 +725,6 @@ function downloadOrderSummary(order) {
       timeZone: 'UTC'
     });
     
-    // Date header bar
     ctx.fillStyle = colors.primary;
     roundRect(ctx, 35, yPos - 12, canvas.width - 70, 24, 4);
     ctx.fill();
@@ -833,7 +734,6 @@ function downloadOrderSummary(order) {
     ctx.fillText(dateStr.toUpperCase(), 45, yPos + 4);
     yPos += 20;
     
-    // Items for this date
     items.forEach(item => {
       const itemName = getItemName(item);
       const price = getItemPrice(item);
@@ -841,18 +741,15 @@ function downloadOrderSummary(order) {
       const itemTotal = price * qty;
       grandTotal += itemTotal;
       
-      // Item row background (alternating)
       ctx.fillStyle = items.indexOf(item) % 2 === 0 ? colors.bgLight : colors.white;
       roundRect(ctx, 40, yPos - 5, canvas.width - 80, 32, 4);
       ctx.fill();
       
-      // Item name and quantity
       ctx.font = '13px Arial';
       ctx.fillStyle = colors.text;
       ctx.textAlign = 'left';
       ctx.fillText(`${itemName} x${qty}`, 52, yPos + 12);
       
-      // Price (right aligned)
       ctx.font = 'bold 13px Arial';
       ctx.fillStyle = colors.primaryDark;
       ctx.textAlign = 'right';
@@ -865,11 +762,10 @@ function downloadOrderSummary(order) {
     yPos += 8;
   });
   
-  // Divider before total
   drawDivider(ctx, 30, yPos, canvas.width - 30, colors.border);
   yPos += 15;
   
-  // Total Box - larger and more prominent
+  // Total Box - Green gradient
   ctx.fillStyle = colors.success;
   roundRect(ctx, 30, yPos, canvas.width - 60, 55, 8);
   ctx.fill();
@@ -880,18 +776,15 @@ function downloadOrderSummary(order) {
   ctx.fillText(`TOTAL: ${formatRupiah(grandTotal)}`, 250, yPos + 35);
   yPos += 75;
   
-  // Divider
   drawDivider(ctx, 30, yPos, canvas.width - 30, colors.border);
   yPos += 15;
   
-  // Payment Section Header
   ctx.font = 'bold 13px Arial';
   ctx.fillStyle = colors.primary;
   ctx.textAlign = 'left';
   ctx.fillText('PAYMENT DETAILS', 45, yPos);
   yPos += 22;
   
-  // Bank details box
   ctx.fillStyle = colors.bgLight;
   roundRect(ctx, 35, yPos - 8, canvas.width - 70, 95, 6);
   ctx.fill();
@@ -907,36 +800,31 @@ function downloadOrderSummary(order) {
   ctx.fillText(`Amount Due: ${formatRupiah(grandTotal)}`, 50, yPos + 58);
   yPos += 115;
   
-  // WhatsApp Section - more prominent
+  // WhatsApp Section
   ctx.fillStyle = colors.whatsapp;
   roundRect(ctx, 25, yPos, canvas.width - 50, 85, 10);
   ctx.fill();
   
-  // WhatsApp icon text
   ctx.font = 'bold 11px Arial';
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.textAlign = 'center';
   ctx.fillText('SEND PAYMENT PROOF VIA WHATSAPP', 250, yPos + 22);
   
-  // Phone number - larger
   ctx.font = 'bold 22px Arial';
   ctx.fillStyle = colors.white;
   ctx.fillText(BANK_DETAILS.whatsappNumber, 250, yPos + 52);
   
-  // Instruction
   ctx.font = '10px Arial';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.fillText('Click Open WhatsApp button & attach transfer screenshot', 250, yPos + 72);
   yPos += 100;
   
-  // Footer note
   ctx.font = 'italic 10px Arial';
   ctx.fillStyle = colors.textLight;
   ctx.textAlign = 'center';
   ctx.fillText('Thank you for ordering from Bless Canteen!', 250, yPos);
   ctx.fillText(`Reference: ${order.order_number}`, 250, yPos + 14);
   
-  // Helper function to draw rounded rectangles
   function roundRect(ctx, x, y, width, height, radius) {
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
@@ -951,7 +839,6 @@ function downloadOrderSummary(order) {
     ctx.closePath();
   }
   
-  // Helper function to draw dividers
   function drawDivider(ctx, x, y, width, color) {
     ctx.strokeStyle = color;
     ctx.lineWidth = 1;
@@ -963,7 +850,6 @@ function downloadOrderSummary(order) {
     ctx.setLineDash([]);
   }
   
-  // Convert canvas to JPG and download
   try {
     const dataURL = canvas.toDataURL('image/jpeg', 0.95);
     const link = document.createElement('a');
@@ -993,13 +879,12 @@ async function seedDatabase() {
   }
 }
 
-// ============ Cart Functions ============
+// ============ CART FUNCTIONS ============
 
 function addToCart(menuItem) {
   const selectedDate = state.weekDates[state.selectedDayIndex];
   const dayInfo = DAYS_OF_WEEK[state.selectedDayIndex];
   
-  // Check if item already exists for this date
   const existingIndex = state.cart.findIndex(item => 
     item.menuItemId === menuItem.id && 
     formatDate(item.mealDate) === formatDate(selectedDate)
@@ -1071,13 +956,10 @@ function getItemsByDay() {
   }, {});
 }
 
-// ============ UI Rendering ============
+// ============ UI RENDERING FUNCTIONS ============
 
 function calculateWeekDates() {
-  // Fixed week: August 24-28, 2026 (Monday-Friday)
-  // Using UTC to avoid timezone issues
-  // Update these dates manually each week
-  const fixedWeekStart = new Date(Date.UTC(2026, 7, 24, 0, 0, 0)); // August 24, 2026 UTC (Monday)
+  const fixedWeekStart = new Date(Date.UTC(2026, 7, 24, 0, 0, 0));
   
   state.weekDates = Array.from({ length: 5 }, (_, i) => {
     const date = new Date(fixedWeekStart);
@@ -1110,6 +992,18 @@ function renderHeader() {
       </div>
     </div>
   `;
+  
+  // Add scroll effect listener
+  let lastScrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const headerEl = document.getElementById('header');
+    if (window.scrollY > 50) {
+      headerEl.classList.add('scrolled');
+    } else {
+      headerEl.classList.remove('scrolled');
+    }
+    lastScrollY = window.scrollY;
+  });
 }
 
 function renderWeekSelector() {
@@ -1117,7 +1011,6 @@ function renderWeekSelector() {
   const monday = state.weekDates[0];
   const friday = state.weekDates[4];
   
-  // Format dates using UTC to avoid timezone issues
   const mondayStr = monday.toLocaleDateString('en-US', { 
     month: 'short', 
     day: 'numeric',
@@ -1161,7 +1054,6 @@ function renderWeekSelector() {
 }
 
 function renderMealPeriodTabs() {
-  // Meal period tabs removed - showing day info instead
   const tabsContainer = document.getElementById('meal-period-tabs');
   const selectedDate = state.weekDates[state.selectedDayIndex];
   const selectedDayInfo = DAYS_OF_WEEK[state.selectedDayIndex];
@@ -1179,10 +1071,10 @@ function renderSearchAndFilters() {
   
   container.innerHTML = `
     <div class="search-container">
-      <span class="search-icon">${ICONS.search}</span>
       <input type="text" class="search-input" id="search-input" placeholder="Search menu items..." 
              value="${document.getElementById('search-input')?.value || ''}"
              oninput="handleSearch(this.value)">
+      <span class="search-icon">${ICONS.search}</span>
     </div>
     
     <div class="category-filters">
@@ -1207,7 +1099,6 @@ function renderMenu() {
   
   let filteredItems = state.menuItems;
   
-  // Apply search filter
   if (searchQuery) {
     filteredItems = filteredItems.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1247,7 +1138,7 @@ function renderMenu() {
     <div class="menu-grid">
       ${filteredItems.map(item => `
         <div class="menu-card">
-          <div class="card-image">
+          <div class="card-image" data-category="${item.category_name || ''}">
             ${FOOD_ICONS[item.category_name] || ICONS.package}
             <div class="card-overlay"></div>
             <span class="card-badge">Click to add</span>
@@ -1268,7 +1159,7 @@ function renderMenu() {
             <span class="card-price">${formatRupiah(item.price)}</span>
             <button class="add-button" onclick='addToCart(${JSON.stringify(item)})'>
               ${ICONS.plus}
-              Add to<br>${selectedDayInfo.label}
+              Add
             </button>
           </div>
         </div>
@@ -1285,18 +1176,15 @@ function renderCart() {
   const { totalItems, totalPrice } = getCartTotals();
   const itemsByDay = getItemsByDay();
   
-  // Show/hide overlay and sidebar
   overlay.classList.toggle('active', state.showCart);
   sidebar.classList.toggle('active', state.showCart);
   
   if (!state.showCart) return;
   
-  // Cart title
   document.getElementById('cart-title').innerHTML = `
     ${ICONS.calendar} Your Weekly Order (${totalItems} items)
   `;
   
-  // Empty state or items
   if (totalItems === 0) {
     body.innerHTML = `
       <div class="cart-empty">
@@ -1345,11 +1233,10 @@ function renderCart() {
     `).join('');
   }
   
-  // Footer
   footer.innerHTML = `
     <div class="cart-summary">
       <span>${ICONS.package} Weekly Total:</span>
-      <span style="color: var(--primary-600);">${formatRupiah(totalPrice)}</span>
+      <span>${formatRupiah(totalPrice)}</span>
     </div>
     ${totalItems > 0 ? `<p class="cart-stats">${totalItems} meals across ${Object.keys(itemsByDay).length} days</p>` : ''}
     <button class="order-button" onclick="placeOrder()" ${state.isOrdering || totalItems === 0 ? 'disabled' : ''}>
@@ -1406,7 +1293,7 @@ function renderOrderConfirmation() {
           </div>
           
           <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
-            <p style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem;">Order Summary (${order.items.length} items):</p>
+            <p style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--gray-800);">Order Summary (${order.items.length} items):</p>
             <div class="order-summary-list">
               ${order.items.sort((a, b) => new Date(a.meal_date).getTime() - new Date(b.meal_date).getTime()).map(item => `
                 <div class="summary-item">
@@ -1444,7 +1331,7 @@ function renderOrderConfirmation() {
           <!-- Download Summary Button -->
           <div class="download-section">
             <button class="download-button" onclick="downloadOrderSummary(${JSON.stringify(order).replace(/"/g, '&quot;')})">
-              ${ICONS.download || ICONS.arrowRight}
+              ${ICONS.download}
               Download Order Summary
             </button>
             <p class="download-hint">Download your order summary for reference and include it when sending payment proof</p>
@@ -1509,7 +1396,7 @@ function renderFooter() {
         <div class="footer-divider"></div>
         
         <div class="footer-bottom">
-          <p>Bless Canteen - Weekly Meal Ordering System</p>
+          <p>Bless Canteen - Premium Weekly Meal Ordering System</p>
         </div>
       </div>
     </footer>
@@ -1526,23 +1413,25 @@ function updateUI() {
   renderOrderConfirmation();
 }
 
-// ============ Event Handlers ============
+// ============ EVENT HANDLERS ============
 
 function toggleCart() {
   state.showCart = !state.showCart;
   renderCart();
+  
+  // Prevent body scroll when cart is open
+  if (state.showCart) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+  }
 }
 
 function selectDay(index) {
   state.selectedDayIndex = index;
   updateUI();
-  // Reload menu for the selected day (daily menu feature)
   fetchMenu(state.selectedCategory || 'all', document.getElementById('search-input')?.value || '');
 }
-
-// Meal period selection removed - simplified system
-
-// Week navigation removed - fixed week display
 
 function filterCategory(category) {
   state.selectedCategory = category;
@@ -1605,9 +1494,10 @@ function closeOrderModal() {
   state.orderSuccess = null;
   state.uploadedFile = null;
   updateUI();
+  document.body.style.overflow = '';
 }
 
-// ============ Initialization ============
+// ============ INITIALIZATION ============
 
 function init() {
   calculateWeekDates();
@@ -1616,7 +1506,6 @@ function init() {
 
   fetchMenu();
   
-  // Seed database if needed (for first run)
   seedDatabase();
 }
 
@@ -1630,8 +1519,8 @@ window.updateQuantity = updateQuantity;
 window.clearDay = clearDay;
 window.toggleCart = toggleCart;
 window.selectDay = selectDay;
-window.selectMealPeriod = selectMealPeriod;
-window.changeWeek = changeWeek;
+window.selectMealPeriod = function() {};
+window.changeWeek = function() {};
 window.filterCategory = filterCategory;
 window.handleSearch = handleSearch;
 window.placeOrder = placeOrder;
