@@ -32,20 +32,41 @@ const DAYS_OF_WEEK = [
 
 // Meal periods removed - simplified ordering system
 
-// BCA Bank Details for Payment
+// BCA Bank Details for Payment - WhatsApp Confirmation
 const BANK_DETAILS = {
   bankName: 'BCA (Bank Central Asia)',
   accountNumber: '3351015908',
   accountName: 'School Cafe Catering',
+  whatsappNumber: '+628129524242',
+  whatsappLink: 'https://wa.me/628129524242',
   instructions: [
     'Transfer the exact order amount to the BCA account above',
     'Take a clear screenshot or photo of your transfer confirmation',
-    'Upload the proof of payment using the button below',
+    'Send the proof via WhatsApp to +628129524242',
+    'Include your Order Number in the WhatsApp message',
     'Your order will be confirmed within 24 hours after verification'
   ]
 };
 
 // ============ Utility Functions ============
+
+/**
+ * Format number as Indonesian Rupiah
+ * @param {number} amount - The amount to format
+ * @returns {string} Formatted Rupiah string (e.g., "Rp 15.000")
+ */
+function formatRupiah(amount) {
+  if (!amount && amount !== 0) return 'Rp 0';
+  
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(numAmount);
+}
 
 function getMonday(date) {
   const d = new Date(date);
@@ -356,6 +377,32 @@ const ICONS = {
     <circle cx="12" cy="20" r="1" fill="#3b82f6"/>
   </svg>`,
 
+  // Download - File Download Icon
+  download: `<svg class="icon icon-download" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="downloadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#10b981"/>
+        <stop offset="100%" style="stop-color:#059669"/>
+      </linearGradient>
+    </defs>
+    <path d="M4 16v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke="url(#downloadGrad)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="8,12 12,16 16,12" stroke="url(#downloadGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="12" y1="4" x2="12" y2="16" stroke="url(#downloadGrad)" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="12" cy="20" r="1" fill="#10b981"/>
+  </svg>`,
+
+  // WhatsApp Icon
+  whatsapp: `<svg class="icon icon-whatsapp" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="waGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#25D366"/>
+        <stop offset="100%" style="stop-color:#128C7E"/>
+      </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="11" fill="url(#waGrad)"/>
+    <path d="M12 5c-3.86 0-7 3.14-7 7 0 1.24.32 2.4.88 3.41L5 19l3.68-.97C9.67 18.66 10.8 19 12 19c3.86 0 7-3.14 7-7s-3.14-7-7-7zm3.52 9.92c-.15.43-.89.82-1.24.87-.35.05-.65.16-2.2-.46-1.86-.73-3.06-2.62-3.15-2.75-.09-.13-.77-1.02-.77-1.95s.49-1.38.66-1.57c.17-.19.37-.24.5-.24h.36c.11 0 .27.04.41.31l.56 1.22c.07.15.03.34-.06.48l-.23.33c-.1.12-.2.25-.09.47.12.22.53.87 1.14 1.41.79.69 1.45.91 1.66.99.21.08.42.04.55-.11.17-.21.59-.69.75-.93.16-.24.35-.2.58-.12.24.08 1.51.71 1.77.84.26.13.43.19.49.3.07.11.07.64-.08 1.07z" fill="white"/>
+  </svg>`,
+
   // Bank - Building Icon for Payment
   bank: `<svg class="icon icon-bank" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -545,6 +592,12 @@ async function fetchMenu(category = 'all', search = '') {
     if (category !== 'all') params.set('category', category);
     if (search) params.set('search', search);
     
+    // Add day of week parameter for daily menu filtering
+    // Day mapping: Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5
+    if (state.selectedDayIndex !== undefined && state.selectedDayIndex !== null) {
+      params.set('day', state.selectedDayIndex + 1); // Convert 0-based to 1-based
+    }
+    
     const response = await fetch(`/api/menu?${params}`);
     const data = await response.json();
     
@@ -605,36 +658,82 @@ async function placeOrder() {
 }
 
 async function uploadPaymentProof(orderId) {
-  if (!state.uploadedFile) {
-    alert('Please select a file to upload');
-    return;
-  }
+  // Upload disabled - using WhatsApp confirmation now
+  alert('Payment proof should be sent via WhatsApp to +628129524242');
+}
+
+function downloadOrderSummary(order) {
+  // Create order summary content
+  const orderDate = new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
   
-  const formData = new FormData();
-  formData.append('payment_proof', state.uploadedFile);
-  formData.append('order_id', orderId);
+  let content = `SCHOOL CAFE - ORDER SUMMARY\n`;
+  content += `${'='.repeat(40)}\n\n`;
+  content += `Order Number: ${order.order_number}\n`;
+  content += `Date Generated: ${orderDate}\n`;
+  content += `Week: ${new Date(order.week_start_date).toLocaleDateString()} - ${new Date(order.week_end_date).toLocaleDateString()}\n`;
+  content += `Status: ${order.status}\n\n`;
+  content += `-`.repeat(40) + '\n';
+  content += `ORDER DETAILS\n`;
+  content += `-`.repeat(40) + '\n\n';
   
-  try {
-    const response = await fetch('/api/upload-payment', {
-      method: 'POST',
-      body: formData
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      alert('Payment proof uploaded successfully! Your order will be verified within 24 hours.');
-      state.showPaymentModal = false;
-      state.showOrderConfirm = false;
-      state.uploadedFile = null;
-      updateUI();
-    } else {
-      alert('Failed to upload: ' + data.error);
+  // Group items by date
+  const itemsByDate = {};
+  order.items.forEach(item => {
+    const dateKey = item.meal_date;
+    if (!itemsByDate[dateKey]) {
+      itemsByDate[dateKey] = [];
     }
-  } catch (error) {
-    console.error('Error uploading payment proof:', error);
-    alert('An error occurred while uploading');
-  }
+    itemsByDate[dateKey].push(item);
+  });
+  
+  let grandTotal = 0;
+  Object.entries(itemsByDate).sort().forEach(([date, items]) => {
+    const dateObj = new Date(date);
+    content += `${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}\n`;
+    
+    items.forEach(item => {
+      const itemTotal = item.unit_price * item.quantity;
+      grandTotal += itemTotal;
+      content += `  - ${item.menuItem.name} x${item.quantity} = ${formatRupiah(itemTotal)}\n`;
+    });
+    content += '\n';
+  });
+  
+  content += `${'='.repeat(40)}\n`;
+  content += `TOTAL: ${formatRupiah(grandTotal)}\n\n`;
+  content += `-`.repeat(40) + '\n';
+  content += `PAYMENT INSTRUCTIONS\n`;
+  content += `-`.repeat(40) + '\n\n';
+  content += `Bank: ${BANK_DETAILS.bankName}\n`;
+  content += `Account Number: ${BANK_DETAILS.accountNumber}\n`;
+  content += `Account Name: ${BANK_DETAILS.accountName}\n`;
+  content += `Amount to Transfer: ${formatRupiah(grandTotal)}\n\n`;
+  content += `IMPORTANT: After making the transfer, send proof via WhatsApp:\n`;
+  content += `WhatsApp: ${BANK_DETAILS.whatsappNumber}\n`;
+  content += `Link: ${BANK_DETAILS.whatsappLink}\n\n`;
+  content += `Include your Order Number (${order.order_number}) in the message!\n`;
+  content += `${'='.repeat(40)}\n`;
+  content += `Thank you for ordering from School Cafe!\n`;
+  
+  // Create and download file
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Order_${order.order_number}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  alert('Order summary downloaded! Please save this file and send payment proof via WhatsApp.');
 }
 
 async function seedDatabase() {
@@ -761,7 +860,7 @@ function renderHeader() {
         <button class="cart-button" onclick="toggleCart()">
           ${ICONS.cart}
           ${totalItems > 0 ? `<span class="cart-badge">${totalItems}</span>` : ''}
-          <span class="cart-total">$${totalPrice.toFixed(2)}</span>
+          <span class="cart-total">${formatRupiah(totalPrice)}</span>
         </button>
       </div>
     </div>
@@ -908,7 +1007,7 @@ function renderMenu() {
             <p class="card-description">${item.description || 'Delicious choice!'}</p>
           </div>
           <div class="card-footer">
-            <span class="card-price">$${item.price.toFixed(2)}</span>
+            <span class="card-price">${formatRupiah(item.price)}</span>
             <button class="add-button" onclick='addToCart(${JSON.stringify(item)})'>
               ${ICONS.plus}
               Add to<br>${selectedDayInfo.label}
@@ -963,7 +1062,7 @@ function renderCart() {
               <div class="cart-item">
                 <div class="cart-item-info">
                   <div class="cart-item-name">${item.name}</div>
-                  <div class="cart-item-price">$${item.price.toFixed(2)} each</div>
+                  <div class="cart-item-price">${formatRupiah(item.price)} each</div>
                 </div>
                 <div class="cart-item-controls">
                   <button class="control-button" onclick="updateQuantity('${item.menuItemId}', '${dateKey}', -1)">
@@ -982,7 +1081,7 @@ function renderCart() {
           </div>
         </div>
         <div class="day-card-footer">
-          <span class="day-total">Day Total: $${dayGroup.total.toFixed(2)}</span>
+          <span class="day-total">Day Total: ${formatRupiah(dayGroup.total)}</span>
         </div>
       </div>
     `).join('');
@@ -992,7 +1091,7 @@ function renderCart() {
   footer.innerHTML = `
     <div class="cart-summary">
       <span>${ICONS.package} Weekly Total:</span>
-      <span style="color: var(--primary-600);">$${totalPrice.toFixed(2)}</span>
+      <span style="color: var(--primary-600);">${formatRupiah(totalPrice)}</span>
     </div>
     ${totalItems > 0 ? `<p class="cart-stats">${totalItems} meals across ${Object.keys(itemsByDay).length} days</p>` : ''}
     <button class="order-button" onclick="placeOrder()" ${state.isOrdering || totalItems === 0 ? 'disabled' : ''}>
@@ -1045,7 +1144,7 @@ function renderOrderConfirmation() {
           
           <div class="detail-row" style="font-size: 1rem;">
             <span class="detail-label">Weekly Total:</span>
-            <span class="detail-value total">$${parseFloat(order.total_amount).toFixed(2)}</span>
+            <span class="detail-value total">${formatRupiah(order.total_amount)}</span>
           </div>
           
           <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
@@ -1054,7 +1153,7 @@ function renderOrderConfirmation() {
               ${order.items.sort((a, b) => new Date(a.meal_date).getTime() - new Date(b.meal_date).getTime()).map(item => `
                 <div class="summary-item">
                   <span>${new Date(item.meal_date).toLocaleDateString('en-US', { weekday: 'short' })} | ${item.meal_period.replace('_', ' ')} | ${item.menuItem.name} x${item.quantity}</span>
-                  <span>$${(item.unit_price * item.quantity).toFixed(2)}</span>
+                  <span>${formatRupiah(item.unit_price * item.quantity)}</span>
                 </div>
               `).join('')}
             </div>
@@ -1084,19 +1183,27 @@ function renderOrderConfirmation() {
             </ul>
           </div>
 
-          <div class="upload-section">
-            <label class="upload-label" for="payment-file">
-              ${ICONS.upload}
-              <span>Upload Payment Proof</span>
-            </label>
-            <input type="file" id="payment-file" accept="image/*,.pdf" onchange="handleFileSelect(event)" style="display: none;">
-            <div id="file-preview" class="file-preview"></div>
+          <!-- Download Summary Button -->
+          <div class="download-section">
+            <button class="download-button" onclick="downloadOrderSummary(${JSON.stringify(order).replace(/"/g, '&quot;')})">
+              ${ICONS.download || ICONS.arrowRight}
+              Download Order Summary
+            </button>
+            <p class="download-hint">Download your order summary for reference and include it when sending payment proof</p>
           </div>
 
-          <button class="upload-button" onclick="uploadPaymentProof('${order.id}')" ${!state.uploadedFile ? 'disabled' : ''}>
-            ${ICONS.upload}
-            Submit Payment Proof
-          </button>
+          <!-- WhatsApp Contact -->
+          <div class="whatsapp-section">
+            <div class="whatsapp-header">
+              <span class="whatsapp-icon">WhatsApp</span>
+              <h4>Send Payment Proof via WhatsApp</h4>
+            </div>
+            <p class="whatsapp-number">${BANK_DETAILS.whatsappNumber}</p>
+            <a href="${BANK_DETAILS.whatsappLink}" target="_blank" class="whatsapp-button">
+              Open WhatsApp
+            </a>
+            <p class="whatsapp-hint">Click the button above to open WhatsApp with pre-filled message. Attach your transfer screenshot and send!</p>
+          </div>
         </div>
         
         <button class="continue-button" onclick="closeOrderModal()">
@@ -1171,6 +1278,8 @@ function toggleCart() {
 function selectDay(index) {
   state.selectedDayIndex = index;
   updateUI();
+  // Reload menu for the selected day (daily menu feature)
+  fetchMenu(state.selectedCategory || 'all', document.getElementById('search-input')?.value || '');
 }
 
 // Meal period selection removed - simplified system

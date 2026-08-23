@@ -1,0 +1,48 @@
+{
+  "export_info": {
+    "exported_at": "2026-08-22T10:13:31.126517",
+    "database_path": "/home/z/my-project/school-cafe/school_cafe.db",
+    "generated_by": "School Cafe Export Tool v2"
+  },
+  "summary": {
+    "total_orders": 0,
+    "total_menu_items": 3,
+    "total_payment_proofs": 0,
+    "total_uploaded_files": 0
+  },
+  "orders": [],
+  "menu_items": [
+    {
+      "id": "mi-makbes",
+      "name": "MakBes",
+      "description": "Makanan Besar - Main meal portion",
+      "price": 15.0,
+      "image_url": null,
+      "is_available": true,
+      "category_id": "cat-main",
+      "created_at": "2026-08-22 09:45:56"
+    },
+    {
+      "id": "mi-makcil",
+      "name": "MakCil",
+      "description": "Makanan Kecil - Small portion",
+      "price": 7.5,
+      "image_url": null,
+      "is_available": true,
+      "category_id": "cat-main",
+      "created_at": "2026-08-22 09:45:56"
+    },
+    {
+      "id": "mi-makring",
+      "name": "MakRing",
+      "description": "Makanan Ringan - Light meal option",
+      "price": 10.0,
+      "image_url": null,
+      "is_available": true,
+      "category_id": "cat-main",
+      "created_at": "2026-08-22 09:45:56"
+    }
+  ],
+  "payment_proofs": [],
+  "uploaded_files": []
+}

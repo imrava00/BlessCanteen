@@ -11,7 +11,7 @@ import json
 import uuid
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, render_template, request, jsonify, g, send_from_directory
+from flask import Flask, render_template, request, jsonify, g, send_from_directory, redirect
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__, 
@@ -136,6 +136,19 @@ def init_db():
             FOREIGN KEY (order_id) REFERENCES weekly_orders (id)
         );
         
+        -- Daily menu schedule table
+        -- Allows setting which menu items are available on which days
+        CREATE TABLE IF NOT EXISTS daily_menu_schedule (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            menu_item_id TEXT NOT NULL,
+            day_of_week INTEGER NOT NULL,
+            is_available BOOLEAN DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (menu_item_id) REFERENCES menu_items(id),
+            UNIQUE(menu_item_id, day_of_week)
+        );
+        
         -- Create indexes for better performance
         CREATE INDEX IF NOT EXISTS idx_menu_items_category ON menu_items(category_id);
         CREATE INDEX IF NOT EXISTS idx_menu_items_available ON menu_items(is_available);
@@ -147,6 +160,8 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_weekly_order_items_date ON weekly_order_items(meal_date);
         CREATE INDEX IF NOT EXISTS idx_weekly_order_items_period ON weekly_order_items(meal_period);
         CREATE INDEX IF NOT EXISTS idx_payment_proofs_order ON payment_proofs(order_id);
+        CREATE INDEX IF NOT EXISTS idx_daily_menu_schedule_item ON daily_menu_schedule(menu_item_id);
+        CREATE INDEX IF NOT EXISTS idx_daily_menu_schedule_day ON daily_menu_schedule(day_of_week);
     ''')
     
     # Ensure upload directory exists
@@ -374,9 +389,9 @@ def seed_page():
         
         # Create menu items
         items = [
-            ('mi-makbes', 'MakBes', 'Makanan Besar - Main meal portion', 15.00, 'cat-main'),
-            ('mi-makring', 'MakRing', 'Makanan Ringan - Light meal option', 10.00, 'cat-main'),
-            ('mi-makcil', 'MakCil', 'Makanan Kecil - Small portion', 7.50, 'cat-main'),
+            ('mi-makbes', 'MakBes', 'Makanan Besar - Main meal portion', 15000.00, 'cat-main'),
+            ('mi-makring', 'MakRing', 'Makanan Ringan - Light meal option', 10000.00, 'cat-main'),
+            ('mi-makcil', 'MakCil', 'Makanan Kecil - Small portion', 7500.00, 'cat-main'),
         ]
         
         for item in items:
@@ -398,9 +413,9 @@ def seed_page():
             <h1>✅ Database Seeded Successfully!</h1>
             <p>Menu items initialized:</p>
             <ul style="list-style: none; font-size: 1.2em;">
-                <li><strong>MakBes</strong> - $15.00</li>
-                <li><strong>MakRing</strong> - $10.00</li>
-                <li><strong>MakCil</strong> - $7.50</li>
+                <li><strong>MakBes</strong> - Rp 15.000</li>
+                <li><strong>MakRing</strong> - Rp 10.000</li>
+                <li><strong>MakCil</strong> - Rp 7.500</li>
             </ul>
             <p style="margin-top: 20px;">Redirecting to School Cafe...</p>
             <a href="/" style="padding: 10px 20px; background: #3b82f6; color: white; 
@@ -417,11 +432,12 @@ def seed_page():
 
 @app.route('/api/menu', methods=['GET'])
 def get_menu():
-    """Get all menu items with categories and filtering"""
+    """Get all menu items with categories and filtering - supports daily menu"""
     try:
         db = get_db()
         category = request.args.get('category', 'all')
         search = request.args.get('search', '')
+        day_of_week = request.args.get('day', '')  # 1=Mon, 2=Tue, ..., 5=Fri
         
         # Build query
         where_clauses = ['mi.is_available = 1']
@@ -435,6 +451,25 @@ def get_menu():
             where_clauses.append('(mi.name LIKE ? OR mi.description LIKE ?)')
             search_term = f'%{search}%'
             params.extend([search_term, search_term])
+        
+        # If day is specified, filter by daily schedule
+        if day_of_week:
+            try:
+                day_int = int(day_of_week)
+                if 1 <= day_int <= 5:
+                    where_clauses.append('''
+                        mi.id IN (
+                            SELECT menu_item_id FROM daily_menu_schedule 
+                            WHERE day_of_week = ? AND is_available = 1
+                        )
+                        OR mi.id NOT IN (
+                            SELECT menu_item_id FROM daily_menu_schedule 
+                            WHERE day_of_week = ?
+                        )
+                    ''')
+                    params.extend([day_int, day_int])
+            except ValueError:
+                pass
         
         where_sql = ' AND '.join(where_clauses)
         
@@ -732,9 +767,9 @@ def seed_database():
         
         # Create menu items - Only 3 types as requested
         menu_items = [
-            ('mi-makbes', 'MakBes', 'Makanan Besar - Main meal portion with rice and side dishes', 15.00, 'cat-main'),
-            ('mi-makring', 'MakRing', 'Makanan Ringan - Light meal/snack option', 10.00, 'cat-main'),
-            ('mi-makcil', 'MakCil', 'Makanan Kecil - Small portion/light snack', 7.50, 'cat-main'),
+            ('mi-makbes', 'MakBes', 'Makanan Besar - Main meal portion with rice and side dishes', 15000.00, 'cat-main'),
+            ('mi-makring', 'MakRing', 'Makanan Ringan - Light meal/snack option', 10000.00, 'cat-main'),
+            ('mi-makcil', 'MakCil', 'Makanan Kecil - Small portion/light snack', 7500.00, 'cat-main'),
         ]
         
         for item in menu_items:
@@ -957,6 +992,563 @@ def get_order_status(order_id):
     except Exception as e:
         print(f'Error fetching order status: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==================== ADMIN AUTHENTICATION ====================
+# Simple password-based admin authentication
+# Default password: admin123 (CHANGE THIS IN PRODUCTION!)
+ADMIN_PASSWORD = 'admin123'
+
+def check_admin_auth(request):
+    """Check if request has valid admin authentication"""
+    # Check session-based auth (for page requests)
+    auth = request.cookies.get('admin_auth')
+    if auth == ADMIN_PASSWORD:
+        return True
+    
+    # Check header-based auth (for API requests)
+    auth_header = request.headers.get('X-Admin-Auth')
+    if auth_header == ADMIN_PASSWORD:
+        return True
+    
+    return False
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        if password == ADMIN_PASSWORD:
+            resp = jsonify({'success': True, 'redirect': '/admin/dashboard'})
+            resp.set_cookie('admin_auth', ADMIN_PASSWORD, max_age=86400)  # 24 hours
+            return resp
+        else:
+            return jsonify({'success': False, 'error': 'Invalid password'}), 401
+    
+    return render_template('admin_login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    resp = redirect('/admin/login')
+    resp.delete_cookie('admin_auth')
+    return resp
+
+# ==================== ADMIN DASHBOARD ROUTES ====================
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    """Admin dashboard - main page"""
+    if not check_admin_auth(request):
+        return redirect('/admin/login')
+    
+    return render_template('admin.html')
+
+@app.route('/api/admin/stats')
+def admin_get_stats():
+    """Get dashboard statistics"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        db = get_db()
+        
+        # Total orders
+        total_orders = db.execute('SELECT COUNT(*) FROM weekly_orders').fetchone()[0]
+        
+        # Orders by status
+        orders_by_status = {}
+        for row in db.execute('SELECT status, COUNT(*) as count FROM weekly_orders GROUP BY status').fetchall():
+            orders_by_status[row['status']] = row['count']
+        
+        # Total revenue (from completed/paid orders)
+        total_revenue = db.execute('SELECT COALESCE(SUM(total_amount), 0) FROM weekly_orders WHERE status IN ("completed", "paid")').fetchone()[0]
+        
+        # Total menu items
+        total_menu_items = db.execute('SELECT COUNT(*) FROM menu_items').fetchone()[0]
+        
+        # Available menu items
+        available_menu_items = db.execute('SELECT COUNT(*) FROM menu_items WHERE is_available = 1').fetchone()[0]
+        
+        # Today's orders
+        today = datetime.now().strftime('%Y-%m-%d')
+        today_orders = db.execute("SELECT COUNT(*) FROM weekly_orders WHERE DATE(created_at) = ?", (today,)).fetchone()[0]
+        
+        # Pending payment proofs
+        pending_proofs = db.execute("SELECT COUNT(*) FROM payment_proofs WHERE status = 'pending'").fetchone()[0]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'total_orders': total_orders,
+                'orders_by_status': orders_by_status,
+                'total_revenue': float(total_revenue),
+                'total_menu_items': total_menu_items,
+                'available_menu_items': available_menu_items,
+                'today_orders': today_orders,
+                'pending_proofs': pending_proofs
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==================== MENU MANAGEMENT API ====================
+
+@app.route('/api/admin/menu', methods=['GET'])
+def admin_get_menu():
+    """Get all menu items for admin"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        db = get_db()
+        cursor = db.execute('''
+            SELECT mi.*, c.name as category_name 
+            FROM menu_items mi 
+            LEFT JOIN categories c ON mi.category_id = c.id 
+            ORDER BY mi.name
+        ''')
+        
+        items = []
+        for row in cursor.fetchall():
+            item = dict(row)
+            items.append(item)
+        
+        return jsonify({
+            'success': True,
+            'data': items
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/menu', methods=['POST'])
+def admin_add_menu_item():
+    """Add new menu item"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        data = request.get_json()
+        
+        # Generate ID from name
+        item_id = 'mi-' + data['name'].lower().replace(' ', '-').replace('_', '-')
+        
+        db = get_db()
+        db.execute('''
+            INSERT INTO menu_items (id, name, description, price, is_available, category_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            item_id,
+            data['name'],
+            data.get('description', ''),
+            float(data['price']),
+            bool(data.get('is_available', True)),
+            data.get('category_id', 'cat-main')
+        ))
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Menu item added successfully',
+            'data': {'id': item_id}
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/menu/<item_id>', methods=['PUT'])
+def admin_update_menu_item(item_id):
+    """Update existing menu item"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        data = request.get_json()
+        db = get_db()
+        
+        # Check if item exists
+        existing = db.execute('SELECT id FROM menu_items WHERE id = ?', (item_id,)).fetchone()
+        if not existing:
+            return jsonify({'success': False, 'error': 'Menu item not found'}), 404
+        
+        # Update fields
+        update_fields = []
+        update_values = []
+        
+        if 'name' in data:
+            update_fields.append('name = ?')
+            update_values.append(data['name'])
+        if 'description' in data:
+            update_fields.append('description = ?')
+            update_values.append(data['description'])
+        if 'price' in data:
+            update_fields.append('price = ?')
+            update_values.append(float(data['price']))
+        if 'is_available' in data:
+            update_fields.append('is_available = ?')
+            update_values.append(1 if data['is_available'] else 0)
+        if 'category_id' in data:
+            update_fields.append('category_id = ?')
+            update_values.append(data['category_id'])
+        
+        if update_fields:
+            update_fields.append('updated_at = ?')
+            update_values.append(datetime.now().isoformat())
+            update_values.append(item_id)
+            
+            db.execute(f'''
+                UPDATE menu_items 
+                SET {', '.join(update_fields)}
+                WHERE id = ?
+            ''', update_values)
+            db.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Menu item updated successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/menu/<item_id>', methods=['DELETE'])
+def admin_delete_menu_item(item_id):
+    """Delete menu item"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        db = get_db()
+        
+        # Check if item exists
+        existing = db.execute('SELECT id FROM menu_items WHERE id = ?', (item_id,)).fetchone()
+        if not existing:
+            return jsonify({'success': False, 'error': 'Menu item not found'}), 404
+        
+        # Check if item has orders
+        orders_count = db.execute('SELECT COUNT(*) FROM weekly_order_items WHERE menu_item_id = ?', (item_id,)).fetchone()[0]
+        if orders_count > 0:
+            # Instead of deleting, just mark as unavailable
+            db.execute('UPDATE menu_items SET is_available = 0, updated_at = ? WHERE id = ?', (datetime.now().isoformat(), item_id))
+            message = 'Menu item has orders attached. Marked as unavailable instead of deleted.'
+        else:
+            db.execute('DELETE FROM menu_items WHERE id = ?', (item_id,))
+            message = 'Menu item deleted successfully'
+        
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': message
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==================== DAILY MENU SCHEDULE API ====================
+
+@app.route('/api/admin/daily-menu', methods=['GET'])
+def admin_get_daily_menu_schedule():
+    """Get daily menu schedule for all days"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        db = get_db()
+        
+        # Get all menu items
+        cursor = db.execute('SELECT id, name, price FROM menu_items ORDER BY name')
+        all_items = [dict(row) for row in cursor.fetchall()]
+        
+        # Get daily schedule
+        cursor = db.execute('''
+            SELECT dms.menu_item_id, dms.day_of_week, dms.is_available, mi.name, mi.price
+            FROM daily_menu_schedule dms
+            JOIN menu_items mi ON dms.menu_item_id = mi.id
+            ORDER BY dms.day_of_week, mi.name
+        ''')
+        schedule = [dict(row) for row in cursor.fetchall()]
+        
+        # Organize by day
+        schedule_by_day = {day: [] for day in range(1, 6)}
+        for entry in schedule:
+            day = entry['day_of_week']
+            schedule_by_day[day].append({
+                'menu_item_id': entry['menu_item_id'],
+                'name': entry['name'],
+                'price': float(entry['price']),
+                'is_available': bool(entry['is_available'])
+            })
+        
+        # Days of week mapping
+        days_of_week = {
+            1: 'Monday',
+            2: 'Tuesday', 
+            3: 'Wednesday',
+            4: 'Thursday',
+            5: 'Friday'
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'all_menu_items': all_items,
+                'schedule_by_day': schedule_by_day,
+                'days_of_week': days_of_week
+            }
+        })
+        
+    except Exception as e:
+        print(f'Error fetching daily menu schedule: {e}')
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/daily-menu', methods=['POST'])
+def admin_update_daily_menu_schedule():
+    """Update daily menu schedule - set which items are available on which days"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        data = request.get_json()
+        schedule_data = data.get('schedule', {})  # Format: { "menu_item_id": [1, 2, 3, 4, 5] }
+        
+        db = get_db()
+        
+        # Clear existing schedule
+        db.execute('DELETE FROM daily_menu_schedule')
+        
+        # Insert new schedule
+        inserted_count = 0
+        for menu_item_id, days in schedule_data.items():
+            if isinstance(days, list):
+                for day in days:
+                    if 1 <= day <= 5:
+                        db.execute('''
+                            INSERT INTO daily_menu_schedule (menu_item_id, day_of_week, is_available)
+                            VALUES (?, ?, 1)
+                        ''', (menu_item_id, day))
+                        inserted_count += 1
+        
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Daily menu schedule updated successfully. {inserted_count} entries created.',
+            'data': {'entries_created': inserted_count}
+        })
+        
+    except Exception as e:
+        print(f'Error updating daily menu schedule: {e}')
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/daily-menu/simple', methods=['POST'])
+def admin_set_simple_daily_menu():
+    """Simple endpoint to set daily menu - each item available on selected days"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        data = request.get_json()
+        menu_item_id = data.get('menu_item_id')
+        available_days = data.get('days', [])  # Array of day numbers [1, 2, 3, 4, 5]
+        
+        if not menu_item_id:
+            return jsonify({'success': False, 'error': 'menu_item_id is required'}), 400
+        
+        db = get_db()
+        
+        # Remove existing entries for this item
+        db.execute('DELETE FROM daily_menu_schedule WHERE menu_item_id = ?', (menu_item_id,))
+        
+        # Add new entries
+        for day in available_days:
+            if 1 <= day <= 5:
+                db.execute('''
+                    INSERT INTO daily_menu_schedule (menu_item_id, day_of_week, is_available)
+                    VALUES (?, ?, 1)
+                ''', (menu_item_id, day))
+        
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Menu item availability updated for {len(available_days)} days'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==================== ORDER MANAGEMENT API ====================
+
+@app.route('/api/admin/orders', methods=['GET'])
+def admin_get_orders():
+    """Get all orders with filtering"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        db = get_db()
+        
+        # Get query parameters
+        status_filter = request.args.get('status', '')
+        search_query = request.args.get('search', '')
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+        
+        # Build query
+        base_query = '''
+            SELECT wo.*,
+                   u.name as customer_name,
+                   u.grade as customer_class,
+                   pp.file_name as payment_file,
+                   pp.status as payment_status
+            FROM weekly_orders wo
+            LEFT JOIN users u ON wo.user_id = u.id
+            LEFT JOIN payment_proofs pp ON wo.id = pp.order_id
+            WHERE 1=1
+        '''
+        params = []
+        
+        if status_filter:
+            base_query += ' AND wo.status = ?'
+            params.append(status_filter)
+        
+        if search_query:
+            base_query += ' AND (wo.order_number LIKE ? OR u.name LIKE ? OR wo.notes LIKE ?)'
+            search_term = f'%{search_query}%'
+            params.extend([search_term, search_term, search_term])
+        
+        # Count total
+        count_query = f'SELECT COUNT(*) FROM ({base_query})'
+        total = db.execute(count_query, params).fetchone()[0]
+        
+        # Get paginated results
+        query_with_order = base_query + ' ORDER BY wo.created_at DESC LIMIT ? OFFSET ?'
+        params.extend([limit, offset])
+        
+        cursor = db.execute(query_with_order, params)
+        orders = [dict(row) for row in cursor.fetchall()]
+        
+        # Get order items for each order
+        for order in orders:
+            items_cursor = db.execute('''
+                SELECT oi.*, mi.name as menu_item_name, mi.price as unit_price
+                FROM weekly_order_items oi
+                LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+                WHERE oi.weekly_order_id = ?
+            ''', (order['id'],))
+            order['items'] = [dict(item) for item in items_cursor.fetchall()]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'orders': orders,
+                'total': total,
+                'limit': limit,
+                'offset': offset
+            }
+        })
+        
+    except Exception as e:
+        print(f'Error fetching orders: {e}')
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/orders/<order_id>', methods=['PUT'])
+def admin_update_order_status(order_id):
+    """Update order status"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        data = request.get_json()
+        new_status = data.get('status')
+        
+        if new_status not in ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled']:
+            return jsonify({'success': False, 'error': 'Invalid status'}), 400
+        
+        db = get_db()
+        db.execute('''
+            UPDATE weekly_orders 
+            SET status = ?, updated_at = ?
+            WHERE id = ?
+        ''', (new_status, datetime.now().isoformat(), order_id))
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Order status updated to {new_status}'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==================== WEEK DATES CONFIGURATION ====================
+
+@app.route('/api/admin/config/week-dates', methods=['GET', 'POST'])
+def admin_manage_week_dates():
+    """Get or update week dates configuration"""
+    if not check_admin_auth(request):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    if request.method == 'GET':
+        # Return current configuration (stored in a simple config table or file)
+        # For now, we'll read from app config or return defaults
+        return jsonify({
+            'success': True,
+            'data': {
+                'week_start': '2026-08-24',  # Monday
+                'week_end': '2026-08-28'     # Friday
+            }
+        })
+    
+    elif request.method == 'POST':
+        try:
+            data = request.get_json()
+            
+            # In production, you'd save this to database or config file
+            # For now, we'll update the JavaScript file directly
+            week_start = data.get('week_start')
+            week_end = data.get('week_end')
+            
+            # Update the static/js/app.js file with new dates
+            js_file_path = os.path.join('static', 'js', 'app.js')
+            if os.path.exists(js_file_path):
+                with open(js_file_path, 'r') as f:
+                    content = f.read()
+                
+                # Replace the date in calculateWeekDates function
+                # This is a simplified approach - in production use proper config management
+                import re
+                
+                # Parse dates to create Date constructor args
+                start_date = datetime.strptime(week_start, '%Y-%m-%d')
+                
+                old_pattern = r"const fixedWeekStart = new Date\(\d+, \d+, \d+\);"
+                new_line = f"const fixedWeekStart = new Date({start_date.year}, {start_date.month - 1}, {start_date.day});"
+                
+                content = re.sub(old_pattern, new_line, content)
+                
+                with open(js_file_path, 'w') as f:
+                    f.write(content)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Week dates updated to {week_start} - {week_end}',
+                'data': {
+                    'week_start': week_start,
+                    'week_end': week_end
+                }
+            })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
 
 # Serve uploaded files
 @app.route('/uploads/<filename>')
