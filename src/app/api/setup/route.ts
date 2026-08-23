@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const prismaSchemaPath = path.join(process.cwd(), 'prisma', 'schema.prisma');
     
-    // Create tables
+    // Step 1: Create all tables
     try {
       execSync(`npx prisma db push --accept-data-loss --schema "${prismaSchemaPath}"`, {
         stdio: 'pipe',
@@ -17,12 +17,12 @@ export async function GET() {
       });
     } catch (migrateError) {
       return NextResponse.json(
-        { error: 'Failed to create database tables' },
+        { error: 'Failed to create tables', details: String(migrateError) },
         { status: 500 }
       );
     }
 
-    // Check if admin exists
+    // Step 2: Check if admin exists
     const existingAdmin = await prisma.admin.findUnique({
       where: { username: process.env.ADMIN_USERNAME || 'admin' },
     });
@@ -34,8 +34,8 @@ export async function GET() {
       });
     }
 
-    // Create admin user
-    const admin = await prisma.admin.create({
+    // Step 3: Create admin user
+    await prisma.admin.create({
       data: {
         username: process.env.ADMIN_USERNAME || 'admin',
         password: process.env.ADMIN_PASSWORD || 'admin123',
@@ -43,7 +43,7 @@ export async function GET() {
       },
     });
 
-    // Create sample menu items
+    // Step 4: Add sample menu items
     const menuCount = await prisma.menuItem.count();
     if (menuCount === 0) {
       await prisma.menuItem.createMany({
@@ -60,7 +60,10 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       message: 'Database initialized successfully!',
-      admin: { username: admin.username, name: admin.name },
+      login: {
+        username: process.env.ADMIN_USERNAME || 'admin',
+        password: process.env.ADMIN_PASSWORD || 'admin123',
+      }
     });
   } catch (error) {
     return NextResponse.json(
