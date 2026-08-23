@@ -25,7 +25,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 
 # ==================== GOOGLE DRIVE CONFIGURATION ====================
 # Set to True to enable Google Drive uploads
-app.config['ENABLE_GOOGLE_DRIVE'] = True  # 👈 Toggle this!
+app.config['ENABLE_GOOGLE_DRIVE'] = False  # Disabled - using local storage for now
 
 # Google Drive settings (only used if ENABLE_GOOGLE_DRIVE = True)
 app.config['GOOGLE_CREDENTIALS_FILE'] = 'credentials.json'  # Your service account JSON
@@ -348,6 +348,72 @@ def get_friday(monday):
 def index():
     """Main page - weekly ordering interface"""
     return render_template('index.html')
+
+@app.route('/seed')
+def seed_page():
+    """Simple seed page - visit this URL to initialize database"""
+    try:
+        # Initialize database tables
+        with app.app_context():
+            init_db()
+        
+        # Direct seeding (simpler approach)
+        db = get_db()
+        
+        # Clear existing data
+        db.execute('DELETE FROM weekly_order_items')
+        db.execute('DELETE FROM weekly_orders')
+        db.execute('DELETE FROM menu_items')
+        db.execute('DELETE FROM categories')
+        db.execute('DELETE FROM users')
+        
+        # Create category
+        db.execute('''INSERT INTO categories (id, name, description, icon_name, display_order)
+                   VALUES (?, ?, ?, ?, ?)''', 
+                  ('cat-main', 'Menu Items', 'Weekly menu selections', 'utensils', 1))
+        
+        # Create menu items
+        items = [
+            ('mi-makbes', 'MakBes', 'Makanan Besar - Main meal portion', 15.00, 'cat-main'),
+            ('mi-makring', 'MakRing', 'Makanan Ringan - Light meal option', 10.00, 'cat-main'),
+            ('mi-makcil', 'MakCil', 'Makanan Kecil - Small portion', 7.50, 'cat-main'),
+        ]
+        
+        for item in items:
+            db.execute('''INSERT INTO menu_items (id, name, description, price, category_id)
+                       VALUES (?, ?, ?, ?, ?)''', item)
+        
+        # Create user
+        db.execute('''INSERT INTO users (id, email, name, role, grade)
+                   VALUES (?, ?, ?, ?, ?)''',
+                  (str(uuid.uuid4()), 'student@school.edu', 'Student User', 'student', 'Grade 8'))
+        
+        db.commit()
+        
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head><title>Database Seeded!</title></head>
+        <body style="font-family: Arial; text-align: center; padding: 50px;">
+            <h1>✅ Database Seeded Successfully!</h1>
+            <p>Menu items initialized:</p>
+            <ul style="list-style: none; font-size: 1.2em;">
+                <li><strong>MakBes</strong> - $15.00</li>
+                <li><strong>MakRing</strong> - $10.00</li>
+                <li><strong>MakCil</strong> - $7.50</li>
+            </ul>
+            <p style="margin-top: 20px;">Redirecting to School Cafe...</p>
+            <a href="/" style="padding: 10px 20px; background: #3b82f6; color: white; 
+               text-decoration: none; border-radius: 5px; font-size: 1.1em;">Go to School Cafe →</a>
+            <script>setTimeout(() => window.location = "/", 3000);</script>
+        </body>
+        </html>
+        '''
+            
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        return f"<h1>Error seeding database</h1><p>{str(e)}</p><pre>{error_details}</pre>", 500
 
 @app.route('/api/menu', methods=['GET'])
 def get_menu():

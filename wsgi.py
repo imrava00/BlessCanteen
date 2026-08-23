@@ -6,7 +6,7 @@ import sys
 import os
 
 # Add the project directory to path
-sys.path.insert(0, '/home/z/my-project/school-cafe')
+sys.path.insert(0, '/home/BlessCanteen/school-cafe')
 
 # Set environment
 os.environ['FLASK_ENV'] = 'production'
