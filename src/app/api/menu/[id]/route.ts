@@ -4,11 +4,13 @@ import { db } from '@/lib/db';
 // GET single menu by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     const menu = await db.weeklyMenu.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         days: {
           orderBy: { dayOrder: 'asc' },
@@ -46,15 +48,16 @@ export async function GET(
 // PUT - Update entire weekly menu
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { isActive, days } = body;
 
     // Get existing menu
     const existingMenu = await db.weeklyMenu.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!existingMenu) {
@@ -69,7 +72,7 @@ export async function PUT(
     if (typeof isActive === 'boolean') updateData.isActive = isActive;
 
     await db.weeklyMenu.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData
     });
 
@@ -77,7 +80,7 @@ export async function PUT(
     if (days && Array.isArray(days)) {
       // Delete existing days and their relations (cascade)
       await db.dayMenu.deleteMany({
-        where: { weekMenuId: params.id }
+        where: { weekMenuId: id }
       });
 
       // Recreate all days, categories, and items
@@ -94,7 +97,7 @@ export async function PUT(
           data: {
             day: day.day,
             dayOrder: dayOrderMap[day.day] || 0,
-            weekMenuId: params.id
+            weekMenuId: id
           }
         });
 
@@ -102,7 +105,7 @@ export async function PUT(
           const createdCat = await db.category.create({
             data: {
               name: cat.name,
-              icon: cat.icon || '🍽️',
+              icon: cat.icon || '',
               gradient: cat.gradient || 'from-gray-500 to-gray-400',
               dayMenuId: createdDay.id
             }
@@ -114,7 +117,7 @@ export async function PUT(
                 name: item.name,
                 description: item.description || '',
                 price: item.price || 0,
-                emoji: item.emoji || '🍽️',
+                emoji: item.emoji || '',
                 categoryId: createdCat.id
               }
             });
@@ -125,7 +128,7 @@ export async function PUT(
 
     // Fetch and return updated menu
     const updatedMenu = await db.weeklyMenu.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         days: {
           orderBy: { dayOrder: 'asc' },
@@ -159,11 +162,13 @@ export async function PUT(
 // DELETE - Delete weekly menu
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     const existingMenu = await db.weeklyMenu.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!existingMenu) {
@@ -174,7 +179,7 @@ export async function DELETE(
     }
 
     await db.weeklyMenu.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     return NextResponse.json({ 

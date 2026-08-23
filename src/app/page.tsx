@@ -83,6 +83,43 @@ const formatRupiah = (amount: number) => {
   }).format(amount)
 }
 
+// Get date range from week number (Monday to Friday) - Format: dd/mm/yyyy
+const getWeekDateRange = (weekNumber: number, year?: number): string => {
+  const currentYear = year || new Date().getFullYear()
+  
+  // Find January 1st of the year
+  const janFirst = new Date(currentYear, 0, 1)
+  
+  // Find first Monday of the year (ISO week date system)
+  const firstDay = janFirst.getDay()
+  const firstMonday = new Date(janFirst)
+  
+  // Adjust to get to the first Monday
+  const daysToAdd = firstDay === 1 ? 0 : 
+                   firstDay === 0 ? 1 : 
+                   (8 - firstDay)
+  
+  firstMonday.setDate(janFirst.getDate() + daysToAdd)
+  
+  // Calculate the start of the target week (Monday)
+  const weekStart = new Date(firstMonday)
+  weekStart.setDate(firstMonday.getDate() + ((weekNumber - 1) * 7))
+  
+  // Week end is Friday (4 days after Monday)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 4)
+  
+  // Format as dd/mm/yyyy
+  const formatDate = (date: Date) => {
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
+  }
+  
+  return `${formatDate(weekStart)} - ${formatDate(weekEnd)}`
+}
+
 // Step components type
 type Step = 'register' | 'order' | 'success'
 
@@ -298,7 +335,7 @@ export default function OrderPage() {
   const generateWhatsAppMessage = () => {
     if (!orderResult) return ''
     
-    let msg = `*PESANAN KATERING SEKOLAH*\n`
+    let msg = `*PESANAN BLESS CANTEEN*\n`
     msg += `──────────────────────\n`
     msg += `*No Pesanan:* ${orderResult.orderId}\n`
     msg += `*Siswa:* ${studentData.name}\n`
@@ -321,8 +358,11 @@ export default function OrderPage() {
     
     msg += `\n──────────────────────\n`
     msg += `*TOTAL: ${formatRupiah(getWeeklyTotal())}*\n`
-    msg += `──────────────────────\n`
-    msg += `Terima kasih! 🙏`
+    msg += `──────────────────────\n\n`
+    msg += `*PEMBAYARAN:*\n`
+    msg += `Transfer BCA: 3351015908\n`
+    msg += `a.n Eva Susyana\n\n`
+    msg += `Silakan konfirmasi pembayaran. Terima kasih! 🙏`
     
     return encodeURIComponent(msg)
   }
@@ -364,7 +404,7 @@ export default function OrderPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl shadow-lg mb-4">
               <UtensilsCrossed className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">School Catering</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Bless Canteen</h1>
             <p className="text-gray-600">Pemesanan Katering Sekolah Mingguan</p>
           </div>
 
@@ -492,30 +532,33 @@ export default function OrderPage() {
           <div className="lg:grid lg:grid-cols-3 lg:gap-6">
             {/* Main Content - Menu */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Day Tabs */}
+              {/* Day Tabs - Fixed Size (No Crop) */}
               <div className="bg-white rounded-2xl shadow-lg p-4">
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="flex gap-2 justify-center">
                   {weeklyMenu.days.map((menu, index) => {
                     const dayKey = menu.day.toLowerCase()
                     const hasSelection = (selections[dayKey] || []).length > 0
+                    const isActive = currentDayIndex === index
                     
                     return (
                       <button
                         key={menu.day}
                         onClick={() => setCurrentDayIndex(index)}
-                        className={`flex-shrink-0 px-4 py-3 rounded-xl font-medium transition-all duration-300 flex flex-col items-center gap-1 min-w-[80px] ${
-                          currentDayIndex === index 
-                            ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md' 
+                        className={`flex-shrink-0 px-4 py-2.5 rounded-lg font-medium transition-all duration-150 flex flex-col items-center justify-center w-[105px] h-[80px] ${
+                          isActive 
+                            ? 'bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg' 
                             : hasSelection 
-                              ? 'bg-orange-50 text-orange-600 border-2 border-orange-200' 
-                              : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                              ? 'bg-orange-100 text-orange-700 border-2 border-orange-400' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-transparent'
                         }`}
                       >
-                        <Flame className="w-5 h-5" />
-                        <span className="text-sm">{menu.day}</span>
-                        {hasSelection && (
-                          <span className="text-xs opacity-75">{formatRupiah(getDayTotal(dayKey))}</span>
-                        )}
+                        <Flame className={`w-5 h-5 mb-0.5 ${isActive ? 'text-yellow-300' : hasSelection ? 'text-orange-500' : 'text-gray-400'}`} />
+                        <span className="text-sm font-bold leading-tight">{menu.day}</span>
+                        
+                        {/* Price - only show if has selection */}
+                        <span className={`text-xs mt-0.5 ${isActive ? 'text-white/90' : hasSelection ? 'text-orange-600 font-semibold' : 'invisible'}`}>
+                          {hasSelection ? formatRupiah(getDayTotal(dayKey)) : '-'}
+                        </span>
                       </button>
                     )
                   })}
@@ -607,16 +650,53 @@ export default function OrderPage() {
             {/* Sidebar - Order Summary */}
             <div className="lg:col-span-1">
               <div className="sticky top-20">
-                <Card className="border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-xl">
-                    <CardTitle className="flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5" />
-                      Ringkasan Pesanan
-                    </CardTitle>
-                    <CardDescription className="text-white/80">
-                      {studentData.name} - {studentData.grade}
-                    </CardDescription>
-                  </CardHeader>
+                <Card className="border-0 shadow-xl overflow-hidden">
+                  {/* Enhanced Header */}
+                  <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 text-white relative overflow-hidden">
+                    {/* Decorative background elements */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+                    
+                    <div className="relative z-10 px-6 py-5">
+                      {/* Header Row */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                            <ShoppingCart className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold tracking-tight">Ringkasan Pesanan</h3>
+                            <div className="flex items-center gap-2 text-white/90 text-sm">
+                              <User className="w-3.5 h-3.5" />
+                              <span>{studentData.name || 'Nama Siswa'}</span>
+                              <span className="text-white/50">•</span>
+                              <span>{studentData.grade || 'Kelas'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Item count badge */}
+                        {getTotalItemsCount() > 0 && (
+                          <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                            <span className="text-sm font-semibold">{getTotalItemsCount()} item</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Quick stats row */}
+                      <div className="flex items-center gap-4 text-sm bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4 text-white/80" />
+                          <span className="text-white/90">{getWeekDateRange(weeklyMenu.weekNumber, weeklyMenu.year)}</span>
+                        </div>
+                        <div className="w-px h-4 bg-white/30"></div>
+                        <div className="flex items-center gap-1.5">
+                          <Flame className="w-4 h-4 text-yellow-300" />
+                          <span className="text-white/90">{Object.keys(selections).filter(k => selections[k]?.length > 0).length}/5 hari</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   
                   <CardContent className="p-4">
                     {/* Day-by-day summary */}
@@ -706,7 +786,7 @@ export default function OrderPage() {
   // Success Step
   if (currentStep === 'success') {
     const whatsappMessage = generateWhatsAppMessage()
-    const whatsappUrl = `https://wa.me/?text=${whatsappMessage}`
+    const whatsappUrl = `https://wa.me/628129524242?text=${whatsappMessage}`
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
@@ -753,6 +833,34 @@ export default function OrderPage() {
             )}
             
             <div className="space-y-3">
+              {/* Payment Info Card */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-left">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">BCA</span>
+                  </div>
+                  <span className="font-semibold text-blue-900">Informasi Pembayaran</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center bg-white rounded-lg p-2.5">
+                    <span className="text-gray-600">No. Rekening</span>
+                    <span className="font-mono font-bold text-blue-700">3351015908</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-white rounded-lg p-2.5">
+                    <span className="text-gray-600">Atas Nama</span>
+                    <span className="font-medium text-gray-900">Eva Susyana</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-white rounded-lg p-2.5">
+                    <span className="text-gray-600">Total Transfer</span>
+                    <span className="font-bold text-green-600">{orderResult ? formatRupiah(orderResult.totalAmount) : 'Rp 0'}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-blue-600 mt-3 flex items-start gap-1">
+                  <span>•</span>
+                  <span>Silakan transfer dan konfirmasi via WhatsApp dengan mengirim bukti transfer</span>
+                </p>
+              </div>
+              
               <a 
                 href={whatsappUrl} 
                 target="_blank" 

@@ -121,6 +121,29 @@ interface StatsData {
   recentOrders: Order[]
 }
 
+// Preparation Summary types
+interface PrepSummaryItem {
+  day: string
+  itemName: string
+  categoryName: string
+  itemEmoji: string
+  totalQuantity: number
+  totalPrice: number
+  orderCount: number
+}
+
+interface PrepSummaryData {
+  weekNumber: number
+  year: number
+  summary: PrepSummaryItem[]
+  groupedByDay: Record<string, PrepSummaryItem[]>
+  totals: {
+    items: number
+    revenue: number
+    orders: number
+  }
+}
+
 // Format currency
 const formatRupiah = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -140,6 +163,43 @@ const formatDate = (dateString: string) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+// Get date range from week number (Monday to Friday) - Format: dd/mm/yyyy
+const getWeekDateRange = (weekNumber: number, year?: number): string => {
+  const currentYear = year || new Date().getFullYear()
+  
+  // Find January 1st of the year
+  const janFirst = new Date(currentYear, 0, 1)
+  
+  // Find first Monday of the year (ISO week date system)
+  const firstDay = janFirst.getDay()
+  const firstMonday = new Date(janFirst)
+  
+  // Adjust to get to the first Monday
+  const daysToAdd = firstDay === 1 ? 0 : 
+                   firstDay === 0 ? 1 : 
+                   (8 - firstDay)
+  
+  firstMonday.setDate(janFirst.getDate() + daysToAdd)
+  
+  // Calculate the start of the target week (Monday)
+  const weekStart = new Date(firstMonday)
+  weekStart.setDate(firstMonday.getDate() + ((weekNumber - 1) * 7))
+  
+  // Week end is Friday (4 days after Monday)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 4)
+  
+  // Format as dd/mm/yyyy
+  const formatDateDDMMYYYY = (date: Date) => {
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const yr = date.getFullYear()
+    return `${day}/${month}/${yr}`
+  }
+  
+  return `${formatDateDDMMYYYY(weekStart)} - ${formatDateDDMMYYYY(weekEnd)}`
 }
 
 // Default menu structure
@@ -211,6 +271,8 @@ export default function AdminDashboard() {
   const [weeklyMenus, setWeeklyMenus] = useState<WeeklyMenu[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [selectedMenu, setSelectedMenu] = useState<WeeklyMenu | null>(null)
+  const [prepData, setPrepData] = useState<PrepSummaryData | null>(null)
+  const [isLoadingPrep, setIsLoadingPrep] = useState(false)
   
   // Pagination & filters
   const [orderPage, setOrderPage] = useState(1)
@@ -264,13 +326,36 @@ export default function AdminDashboard() {
     }
   }
 
+  // Day order mapping for consistent sorting
+  const dayOrderPriority: { [key: string]: number } = {
+    'Senin': 1,
+    'Selasa': 2,
+    'Rabu': 3,
+    'Kamis': 4,
+    'Jumat': 5
+  }
+
+  // Sort days in correct order (Senin -> Jumat)
+  const sortDaysByOrder = (days: DayMenu[]): DayMenu[] => {
+    return [...days].sort((a, b) => {
+      const orderA = dayOrderPriority[a.day] || 99
+      const orderB = dayOrderPriority[b.day] || 99
+      return orderA - orderB
+    })
+  }
+
   const loadMenus = async () => {
     try {
       const res = await fetch('/api/menu')
       const data = await res.json()
       setWeeklyMenus(data.weeklyMenus || [])
       if (data.weeklyMenus?.length > 0 && !selectedMenu) {
-        setSelectedMenu(data.weeklyMenus[0])
+        // Sort days when setting the initial menu
+        const menu = data.weeklyMenus[0]
+        if (menu && menu.days) {
+          menu.days = sortDaysByOrder(menu.days)
+        }
+        setSelectedMenu(menu)
       }
     } catch (error) {
       console.error('Failed to load menus:', error)
@@ -295,6 +380,28 @@ export default function AdminDashboard() {
       console.error('Failed to load orders:', error)
     }
   }
+
+  // Load preparation summary for selected week
+  const loadPrepSummary = async (weekNumber: number, year: number) => {
+    setIsLoadingPrep(true)
+    try {
+      const res = await fetch(`/api/menu-prep?weekNumber=${weekNumber}&year=${year}`)
+      const data = await res.json()
+      setPrepData(data)
+    } catch (error) {
+      console.error('Failed to load prep summary:', error)
+      setPrepData(null)
+    } finally {
+      setIsLoadingPrep(false)
+    }
+  }
+
+  // Load prep summary when selected menu changes
+  useEffect(() => {
+    if (selectedMenu && activeTab === 'menu') {
+      loadPrepSummary(selectedMenu.weekNumber, selectedMenu.year)
+    }
+  }, [selectedMenu, activeTab])
 
   // Reload orders when filters change
   useEffect(() => {
@@ -351,26 +458,106 @@ export default function AdminDashboard() {
     
     setIsSavingMenu(true)
     try {
+      // Ensure days are in correct order before saving
+      const orderedDays = sortDaysByOrder(editingMenu)
+      
+      // Clean up the data - remove empty items and ensure proper structure
+      const cleanedDays = orderedDays.map(day => ({
+        day: day.day,
+        categories: (day.categories || [])
+          .filter(cat => cat.name && cat.name.trim() !== '')
+          .map(cat => ({
+            name: cat.name,
+            icon: cat.icon || '',
+            gradient: cat.gradient || '',
+            items: (cat.items || [])
+              .filter(item => item.name && item.name.trim() !== '')
+              .map(item => ({
+                name: item.name,
+                description: item.description || '',
+                price: Number(item.price) || 0,
+                emoji: item.emoji || ''
+              }))
+          }))
+      }))
+      
+      console.log('Saving menu data:', JSON.stringify(cleanedDays, null, 2))
+      
       const res = await fetch(`/api/menu/${selectedMenu.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days: editingMenu })
+        body: JSON.stringify({ days: cleanedDays })
       })
       
       const data = await res.json()
+      console.log('Save response:', data)
       
       if (res.ok) {
         toast.success('Menu berhasil disimpan!')
+        // Sort the returned menu days correctly
+        if (data.menu && data.menu.days) {
+          data.menu.days = sortDaysByOrder(data.menu.days)
+        }
         setSelectedMenu(data.menu)
         setEditingMenu(null)
         await loadMenus()
       } else {
+        console.error('Save error:', data.error)
         toast.error(data.error || 'Gagal menyimpan menu')
       }
     } catch (error) {
+      console.error('Save exception:', error)
       toast.error('Terjadi kesalahan saat menyimpan menu')
     } finally {
       setIsSavingMenu(false)
+    }
+  }
+
+  // Handle add new week
+  const handleAddNewWeek = async () => {
+    try {
+      // Find the highest week number from existing menus
+      const lastWeek = weeklyMenus.reduce((max, menu) => {
+        if (menu.year > max.year) return menu
+        if (menu.year === max.year && menu.weekNumber > max.weekNumber) return menu
+        return max
+      }, weeklyMenus[0] || { weekNumber: 0, year: new Date().getFullYear() })
+      
+      const newWeekNumber = lastWeek.weekNumber + 1
+      const newYear = lastWeek.year
+      
+      // Create new week via API
+      const res = await fetch('/api/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          weekNumber: newWeekNumber, 
+          year: newYear,
+          days: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'].map(day => ({
+            day,
+            categories: [
+              { name: 'Hidangan Utama', icon: '', gradient: 'from-orange-500 to-red-500', items: [] },
+              { name: 'Makanan Ringan', icon: '', gradient: 'from-green-500 to-emerald-400', items: [] },
+              { name: 'Tambahan', icon: '', gradient: 'from-blue-500 to-cyan-400', items: [] }
+            ]
+          }))
+        })
+      })
+      
+      if (res.ok) {
+        toast.success(`Minggu ${newWeekNumber} berhasil ditambahkan!`)
+        await loadMenus()
+      } else {
+        const data = await res.json()
+        if (res.status === 409) {
+          toast.error('Minggu tersebut sudah ada')
+        } else {
+          toast.error(data.error || 'Gagal menambahkan minggu')
+        }
+      }
+    } catch (error) {
+      console.error('Add week exception:', error)
+      toast.error('Terjadi kesalahan saat menambahkan minggu')
     }
   }
 
@@ -629,8 +816,26 @@ export default function AdminDashboard() {
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && stats && (
             <div className="space-y-6">
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+              {/* Stats Cards - Simplified for Weekly Income */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+                <Card className="border-0 shadow-lg shadow-gray-200/50 bg-gradient-to-br from-purple-500 to-indigo-600">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-purple-100 mb-1">Pendapatan Minggu Ini</p>
+                        <p className="text-2xl lg:text-3xl font-bold text-white">{formatRupiah(stats.summary.weekRevenue)}</p>
+                      </div>
+                      <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                        <DollarSign className="w-7 h-7 text-white" />
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center text-sm text-purple-100">
+                      <Users className="w-4 h-4 mr-2" />
+                      <span>{stats.summary.ordersThisWeek} pesanan minggu ini</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card className="border-0 shadow-lg shadow-gray-200/50">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -653,42 +858,6 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500 mb-1">Pendapatan Hari Ini</p>
-                        <p className="text-2xl lg:text-3xl font-bold text-gray-900">{formatRupiah(stats.summary.todayRevenue)}</p>
-                      </div>
-                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                        <DollarSign className="w-6 h-6 text-green-600" />
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center text-sm text-gray-500">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      <span>{stats.summary.ordersToday} pesanan</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-lg shadow-gray-200/50">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Pendapatan Minggu Ini</p>
-                        <p className="text-2xl lg:text-3xl font-bold text-gray-900">{formatRupiah(stats.summary.weekRevenue)}</p>
-                      </div>
-                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                        <TrendingUp className="w-6 h-6 text-purple-600" />
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center text-sm text-gray-500">
-                      <Users className="w-4 h-4 mr-1" />
-                      <span>{stats.summary.ordersThisWeek} pesanan</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-lg shadow-gray-200/50">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
                         <p className="text-sm text-gray-500 mb-1">Total Pendapatan</p>
                         <p className="text-2xl lg:text-3xl font-bold text-gray-900">{formatRupiah(stats.summary.totalRevenue)}</p>
                       </div>
@@ -697,7 +866,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <div className="mt-3 flex items-center text-sm text-gray-500">
-                      <Package className="w-4 h-4 mr-1" />
+                      <Calendar className="w-4 h-4 mr-1" />
                       <span>Semua waktu</span>
                     </div>
                   </CardContent>
@@ -789,37 +958,7 @@ export default function AdminDashboard() {
                 </Card>
               </div>
 
-              {/* Last 7 Days Chart (Simple) */}
-              <Card className="border-0 shadow-lg shadow-gray-200/50">
-                <CardHeader>
-                  <CardTitle className="text-lg">Statistik 7 Hari Terakhir</CardTitle>
-                  <CardDescription>Jumlah pesanan dan pendapatan harian</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {stats.last7Days.map((day, index) => (
-                      <div key={index} className="flex items-center gap-4">
-                        <span className="text-sm text-gray-600 w-24 flex-shrink-0">{day.date}</span>
-                        <div className="flex-1 flex items-center gap-4">
-                          <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                            <div 
-                              className="bg-gradient-to-r from-orange-500 to-red-500 h-full rounded-full flex items-center justify-end pr-2"
-                              style={{ width: `${Math.min(day.orders * 20, 100)}%` }}
-                            >
-                              {day.orders > 0 && (
-                                <span className="text-xs font-medium text-white">{day.orders}</span>
-                              )}
-                            </div>
-                          </div>
-                          <span className="text-sm font-medium text-gray-700 w-28 text-right">
-                            {formatRupiah(day.revenue)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+
             </div>
           )}
 
@@ -831,28 +970,52 @@ export default function AdminDashboard() {
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                      <CardTitle className="text-lg">Pilih Minggu</CardTitle>
-                      <CardDescription>Pilih minggu untuk mengelola menu</CardDescription>
+                      <CardTitle className="text-lg">Pilih Periode Menu</CardTitle>
+                      <CardDescription>
+                        {selectedMenu ? getWeekDateRange(selectedMenu.weekNumber, selectedMenu.year) : 'Pilih periode untuk mengelola menu'}
+                      </CardDescription>
                     </div>
-                    <Select 
-                      value={selectedMenu?.id || ''} 
-                      onValueChange={(value) => {
-                        const menu = weeklyMenus.find(m => m.id === value)
-                        setSelectedMenu(menu || null)
-                        setEditingMenu(null)
-                      }}
-                    >
-                      <SelectTrigger className="w-full sm:w-64">
-                        <SelectValue placeholder="Pilih minggu" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {weeklyMenus.map((menu) => (
-                          <SelectItem key={menu.id} value={menu.id}>
-                            Minggu {menu.weekNumber}, {menu.year} {menu.isActive && '(Aktif)'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="relative z-50 flex items-center gap-2">
+                      <Select 
+                        value={selectedMenu?.id || ''} 
+                        onValueChange={(value) => {
+                          const menu = weeklyMenus.find(m => m.id === value)
+                          // Sort days when selecting a new menu
+                          if (menu && menu.days) {
+                            menu.days = sortDaysByOrder(menu.days)
+                          }
+                          setSelectedMenu(menu || null)
+                          setEditingMenu(null)
+                        }}
+                      >
+                        <SelectTrigger className="w-full sm:w-64 cursor-pointer">
+                          <SelectValue placeholder="Pilih periode menu..." />
+                        </SelectTrigger>
+                        <SelectContent className="z-[100]">
+                          {weeklyMenus.length === 0 ? (
+                            <SelectItem value="" disabled>
+                              Tidak ada menu tersedia
+                            </SelectItem>
+                          ) : (
+                            weeklyMenus.map((menu) => (
+                              <SelectItem key={menu.id} value={menu.id}>
+                                {getWeekDateRange(menu.weekNumber, menu.year)} {menu.isActive && '(Aktif)'}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      
+                      {/* Add New Week Button */}
+                      <Button
+                        onClick={handleAddNewWeek}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        size="icon"
+                        title="Tambah Minggu Baru"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
               </Card>
@@ -864,7 +1027,9 @@ export default function AdminDashboard() {
                     <div className="flex gap-3">
                       <Button 
                         onClick={() => {
-                          setEditingMenu(JSON.parse(JSON.stringify(selectedMenu.days)))
+                          // Sort days correctly when entering edit mode
+                          const sortedDays = sortDaysByOrder(selectedMenu.days)
+                          setEditingMenu(JSON.parse(JSON.stringify(sortedDays)))
                         }}
                         className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                       >
@@ -893,7 +1058,7 @@ export default function AdminDashboard() {
 
                   {/* Menu Display/Edit */}
                   <div className="space-y-6">
-                    {(editingMenu || selectedMenu.days).map((day, dayIndex) => (
+                    {(editingMenu ? sortDaysByOrder(editingMenu) : sortDaysByOrder(selectedMenu.days)).map((day, dayIndex) => (
                       <Card key={day.day} className="border-0 shadow-lg shadow-gray-200/50 overflow-hidden">
                         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -985,6 +1150,118 @@ export default function AdminDashboard() {
                     ))}
                   </div>
                 </>
+              )}
+
+              {/* Preparation Summary Section */}
+              {selectedMenu && (
+                <Card className="border-0 shadow-lg shadow-gray-200/50 overflow-hidden">
+                  <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                          <Package className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-white">Ringkasan Persiapan</h3>
+                          <p className="text-sm text-emerald-100">
+                            Jumlah pesanan per menu untuk persiapan
+                          </p>
+                        </div>
+                      </div>
+                      {prepData && (
+                        <div className="hidden sm:flex items-center gap-6 text-white">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{prepData.totals.orders}</p>
+                            <p className="text-xs text-emerald-100">Pesanan</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{prepData.totals.items}</p>
+                            <p className="text-xs text-emerald-100">Total Item</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{formatRupiah(prepData.totals.revenue)}</p>
+                            <p className="text-xs text-emerald-100">Pendapatan</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <CardContent className="p-6">
+                    {isLoadingPrep ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mr-3"></div>
+                        <span className="text-gray-600">Memuat data persiapan...</span>
+                      </div>
+                    ) : !prepData || prepData.summary.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">Belum ada pesanan untuk minggu ini</p>
+                        <p className="text-sm text-gray-400 mt-1">Pesanan akan muncul di sini setelah siswa melakukan pemesanan</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {/* Mobile Stats */}
+                        <div className="sm:hidden grid grid-cols-3 gap-3">
+                          <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                            <p className="text-lg font-bold text-emerald-700">{prepData.totals.orders}</p>
+                            <p className="text-xs text-emerald-600">Pesanan</p>
+                          </div>
+                          <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                            <p className="text-lg font-bold text-emerald-700">{prepData.totals.items}</p>
+                            <p className="text-xs text-emerald-600">Total Item</p>
+                          </div>
+                          <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                            <p className="text-lg font-bold text-emerald-700">{formatRupiah(prepData.totals.revenue)}</p>
+                            <p className="text-xs text-emerald-600">Pendapatan</p>
+                          </div>
+                        </div>
+
+                        {/* Grouped by Day */}
+                        {Object.entries(prepData.groupedByDay).map(([day, items]) => {
+                          const dayEmoji: Record<string, string> = {
+                            'Senin': '📅',
+                            'Selasa': '📅', 
+                            'Rabu': '📅',
+                            'Kamis': '📅',
+                            'Jumat': '📅'
+                          }
+                          return (
+                            <div key={day} className="border border-gray-200 rounded-xl overflow-hidden">
+                              <div className="bg-gray-50 px-4 py-3 flex items-center gap-2">
+                                <span className="text-lg">{dayEmoji[day] || '📅'}</span>
+                                <h4 className="font-semibold text-gray-900">{day}</h4>
+                                <span className="text-sm text-gray-500">({items.length} menu dipesan)</span>
+                              </div>
+                              <div className="divide-y divide-gray-100">
+                                {items.map((item, idx) => (
+                                  <div key={idx} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-2xl">{item.itemEmoji || '🍽️'}</span>
+                                      <div>
+                                        <p className="font-medium text-gray-900">{item.itemName}</p>
+                                        <p className="text-sm text-gray-500">{item.categoryName}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                      <div className="text-right">
+                                        <p className="text-lg font-bold text-emerald-600">{item.totalQuantity}x</p>
+                                        <p className="text-xs text-gray-500">{item.orderCount} pesanan</p>
+                                      </div>
+                                      <div className="w-24 text-right">
+                                        <p className="font-semibold text-gray-900">{formatRupiah(item.totalPrice)}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
 
               {weeklyMenus.length === 0 && (

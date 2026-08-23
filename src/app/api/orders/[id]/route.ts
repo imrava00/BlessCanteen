@@ -4,11 +4,13 @@ import { db } from '@/lib/db';
 // GET single order
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     const order = await db.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         items: true
       }
@@ -34,14 +36,15 @@ export async function GET(
 // PUT - Update order (e.g., change status)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { status } = body;
 
     const existingOrder = await db.order.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!existingOrder) {
@@ -57,7 +60,7 @@ export async function PUT(
     }
 
     const updatedOrder = await db.order.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: { items: true }
     });
@@ -78,11 +81,13 @@ export async function PUT(
 // DELETE - Delete order
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     const existingOrder = await db.order.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!existingOrder) {
@@ -93,7 +98,7 @@ export async function DELETE(
     }
 
     await db.order.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     return NextResponse.json({ 
