@@ -7,13 +7,13 @@ async function main() {
   console.log('🌱 Seeding database...');
   
   // Create default admin user
-  const hashedPassword = await hash('admin123', 10);
+  const hashedPassword = await hash('BlessCanteen', 10);
   
   const admin = await prisma.admin.upsert({
     where: { username: 'admin' },
     update: {},
     create: {
-      username: 'admin',
+      username: 'BlessCanteenAdmin',
       password: hashedPassword,
       name: 'Administrator',
       role: 'admin'
@@ -21,7 +21,7 @@ async function main() {
   });
   
   console.log(`✅ Admin user created: ${admin.username}`);
-  console.log('   Password: admin123');
+  console.log('   Password: BlessCanteen');
   
   // Create sample weekly menus for current week + next 3 weeks (4 weeks total)
   const now = new Date();
