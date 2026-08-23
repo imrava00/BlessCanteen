@@ -6,22 +6,34 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
   
+  // ============================================
+  // ⚠️  UBAH CREDENTIALS ADMIN DI SINI!
+  // ============================================
+  const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'BlessCanteenAdmin';
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'BlessCanteen';
+  const ADMIN_NAME = process.env.ADMIN_NAME || 'Administrator Bless Canteen';
+  // ============================================
+  
   // Create default admin user
-  const hashedPassword = await hash('BlessCanteen', 10);
+  const hashedPassword = await hash(ADMIN_PASSWORD, 10);
   
   const admin = await prisma.admin.upsert({
-    where: { username: 'admin' },
-    update: {},
-    create: {
-      username: 'BlessCanteenAdmin',
+    where: { username: ADMIN_USERNAME },
+    update: { 
+      username: ADMIN_USERNAME,
       password: hashedPassword,
-      name: 'Administrator',
+      name: ADMIN_NAME 
+    },
+    create: {
+      username: ADMIN_USERNAME,
+      password: hashedPassword,
+      name: ADMIN_NAME,
       role: 'admin'
     }
   });
   
-  console.log(`✅ Admin user created: ${admin.username}`);
-  console.log('   Password: BlessCanteen');
+  console.log(`✅ Admin user created/updated: ${admin.username}`);
+  console.log(`   Password: ${ADMIN_PASSWORD}`);
   
   // Create sample weekly menus for current week + next 3 weeks (4 weeks total)
   const now = new Date();
