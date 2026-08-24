@@ -72,6 +72,16 @@ export async function POST(request: NextRequest) {
 
     // Create weekly menu with days, categories, and items
     console.log('🔨 [API] Creating weekly menu structure...');
+    
+    // Map day names to dayOrder (Senin=1, Selasa=2, ..., Jumat=5)
+    const dayOrderMap: Record<string, number> = {
+      'Senin': 1,
+      'Selasa': 2,
+      'Rabu': 3,
+      'Kamis': 4,
+      'Jumat': 5
+    };
+    
     const weeklyMenu = await db.weeklyMenu.create({
       data: {
         weekNumber,
@@ -79,6 +89,7 @@ export async function POST(request: NextRequest) {
         days: {
           create: days?.map((day: any) => ({
             day: day.day,
+            dayOrder: dayOrderMap[day.day] || 0,
             categories: {
               create: day.categories?.map((cat: any) => ({
                 name: cat.name,
