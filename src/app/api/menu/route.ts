@@ -4,6 +4,8 @@ import { db } from '@/lib/db';
 // GET - Fetch all weekly menus with full details
 export async function GET() {
   try {
+    console.log('📡 [API] Fetching all weekly menus...');
+    
     const weeklyMenus = await db.weeklyMenu.findMany({
       orderBy: [
         { year: 'desc' },
@@ -26,11 +28,12 @@ export async function GET() {
       }
     });
 
+    console.log(`✅ [API] Found ${weeklyMenus.length} weekly menus`);
     return NextResponse.json({ weeklyMenus });
   } catch (error) {
-    console.error('Error fetching menus:', error);
+    console.error('❌ [API] Error fetching menus:', error);
     return NextResponse.json(
-      { error: 'Gagal mengambil data menu' },
+      { error: 'Gagal mengambil data menu', details: String(error) },
       { status: 500 }
     );
   }
@@ -42,7 +45,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { weekNumber, year, days } = body;
 
+    console.log(`📥 [API] Creating new week: Week ${weekNumber}, Year ${year}`);
+    console.log(`📥 [API] Days data:`, JSON.stringify(days?.map((d: any) => d.day)));
+
     if (!weekNumber || !year) {
+      console.error('❌ [API] Missing weekNumber or year');
       return NextResponse.json(
         { error: 'Week number dan year harus diisi' },
         { status: 400 }
@@ -50,18 +57,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if weekly menu already exists
+    console.log(`🔍 [API] Checking if week ${weekNumber}/${year} already exists...`);
     const existing = await db.weeklyMenu.findUnique({
       where: { weekNumber_year: { weekNumber, year } }
     });
 
     if (existing) {
+      console.warn(`⚠️ [API] Week ${weekNumber}/${year} already exists`);
       return NextResponse.json(
-        { error: 'Menu untuk minggu ini sudah ada' },
+        { error: 'Menu untuk minggu ini sudah ada', existingId: existing.id },
         { status: 409 }
       );
     }
 
     // Create weekly menu with days, categories, and items
+    console.log('🔨 [API] Creating weekly menu structure...');
     const weeklyMenu = await db.weeklyMenu.create({
       data: {
         weekNumber,
@@ -100,14 +110,16 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log(`✅ [API] Weekly menu created successfully! ID: ${weeklyMenu.id}`);
+    
     return NextResponse.json({ 
       message: 'Weekly menu berhasil dibuat',
       weeklyMenu 
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating menu:', error);
+    console.error('❌ [API] Error creating menu:', error);
     return NextResponse.json(
-      { error: 'Gagal membuat menu' },
+      { error: 'Gagal membuat menu', details: String(error) },
       { status: 500 }
     );
   }

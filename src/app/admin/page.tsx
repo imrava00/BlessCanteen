@@ -36,6 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import MenuCalendar from '@/components/MenuCalendar'
 
 // Types
 interface AdminUser {
@@ -1000,202 +1001,15 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Menu Management Tab */}
+          {/* Menu Management Tab - Calendar View */}
           {activeTab === 'menu' && (
-            <div className="space-y-6">
-              {/* Week Selector */}
-              <Card className="border-0 shadow-lg shadow-gray-200/50">
-                <CardHeader>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                      <CardTitle className="text-lg">Pilih Periode Menu</CardTitle>
-                      <CardDescription>
-                        {selectedMenu ? getWeekDateRange(selectedMenu.weekNumber, selectedMenu.year) : 'Pilih periode untuk mengelola menu'}
-                      </CardDescription>
-                    </div>
-                    <div className="relative z-50 flex items-center gap-2">
-                      <Select 
-                        value={selectedMenu?.id || ''} 
-                        onValueChange={(value) => {
-                          const menu = weeklyMenus.find(m => m.id === value)
-                          // Sort days when selecting a new menu
-                          if (menu && menu.days) {
-                            menu.days = sortDaysByOrder(menu.days)
-                          }
-                          setSelectedMenu(menu || null)
-                          setEditingMenu(null)
-                        }}
-                      >
-                        <SelectTrigger className="w-full sm:w-64 cursor-pointer">
-                          <SelectValue placeholder="Pilih periode menu..." />
-                        </SelectTrigger>
-                        <SelectContent className="z-[100]">
-                          {weeklyMenus.length === 0 ? (
-                            <SelectItem value="" disabled>
-                              Tidak ada menu tersedia
-                            </SelectItem>
-                          ) : (
-                            weeklyMenus.map((menu) => (
-                              <SelectItem key={menu.id} value={menu.id}>
-                                {getWeekDateRange(menu.weekNumber, menu.year)} {menu.isActive && '(Aktif)'}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      
-                      {/* Add New Week Button */}
-                      <Button
-                        onClick={handleAddNewWeek}
-                        disabled={isAddingWeek}
-                        className={`bg-green-600 hover:bg-green-700 text-white ${isAddingWeek ? 'opacity-75 cursor-not-allowed' : ''}`}
-                        size="icon"
-                        title={isAddingWeek ? 'Memproses...' : 'Tambah Minggu Baru'}
-                      >
-                        {isAddingWeek ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        ) : (
-                          <Plus className="w-5 h-5" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
+            <MenuCalendar 
+              weeklyMenus={weeklyMenus} 
+              onRefresh={loadMenus} 
+            />
+          )}
 
-              {selectedMenu && (
-                <>
-                  {/* Menu Actions */}
-                  {!editingMenu ? (
-                    <div className="flex gap-3">
-                      <Button 
-                        onClick={() => {
-                          // Sort days correctly when entering edit mode
-                          const sortedDays = sortDaysByOrder(selectedMenu.days)
-                          setEditingMenu(JSON.parse(JSON.stringify(sortedDays)))
-                        }}
-                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                      >
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        Edit Menu
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-3">
-                      <Button 
-                        onClick={handleSaveMenu}
-                        disabled={isSavingMenu}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Save className="w-4 h-4 mr-2" />
-                        {isSavingMenu ? 'Menyimpan...' : 'Simpan Perubahan'}
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        onClick={() => setEditingMenu(null)}
-                      >
-                        Batal
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Menu Display/Edit */}
-                  <div className="space-y-6">
-                    {(editingMenu ? sortDaysByOrder(editingMenu) : sortDaysByOrder(selectedMenu.days)).map((day, dayIndex) => (
-                      <Card key={day.day} className="border-0 shadow-lg shadow-gray-200/50 overflow-hidden">
-                        <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <Flame className="w-6 h-6 text-white" />
-                            <h3 className="text-xl font-bold text-white">{day.day}</h3>
-                          </div>
-                        </div>
-                        
-                        <div className="p-6 space-y-6">
-                          {(editingMenu?.[dayIndex]?.categories || day.categories).map((cat, catIndex) => (
-                            <div key={cat.name}>
-                              <div className="flex items-center gap-3 mb-4">
-                                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                                  <UtensilsCrossed className="w-4 h-4 text-white" />
-                                </div>
-                                <h4 className="font-semibold text-gray-900 text-lg">{cat.name}</h4>
-                                <span className="text-sm text-gray-500">
-                                  ({(editingMenu?.[dayIndex]?.categories[catIndex]?.items || cat.items).length} item)
-                                </span>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {(editingMenu?.[dayIndex]?.categories[catIndex]?.items || cat.items).map((item, itemIndex) => (
-                                  <div 
-                                    key={itemIndex} 
-                                    className={`p-4 rounded-xl border ${
-                                      editingMenu ? 'border-orange-200 bg-orange-50/50' : 'border-gray-200 bg-white'
-                                    }`}
-                                  >
-                                    {editingMenu ? (
-                                      <div className="space-y-3">
-                                          <Input
-                                            value={item.name}
-                                            onChange={(e) => updateMenuItem(dayIndex, catIndex, itemIndex, 'name', e.target.value)}
-                                            placeholder="Nama menu"
-                                            className="font-medium"
-                                          />
-                                          <Input
-                                            value={item.description}
-                                            onChange={(e) => updateMenuItem(dayIndex, catIndex, itemIndex, 'description', e.target.value)}
-                                            placeholder="Deskripsi"
-                                          />
-                                          <div className="flex gap-2">
-                                            <div className="relative flex-1">
-                                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">Rp</span>
-                                              <Input
-                                                type="number"
-                                                value={item.price}
-                                                onChange={(e) => updateMenuItem(dayIndex, catIndex, itemIndex, 'price', parseInt(e.target.value) || 0)}
-                                                className="pl-10"
-                                                placeholder="0"
-                                              />
-                                            </div>
-                                            <Button
-                                              variant="outline"
-                                              size="icon"
-                                              onClick={() => removeMenuItem(dayIndex, catIndex, itemIndex)}
-                                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                            >
-                                              <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                          </div>
-                                      </div>
-                                    ) : (
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-gray-900">{item.name}</p>
-                                        <p className="text-sm text-gray-500 line-clamp-1">{item.description}</p>
-                                        <p className="text-sm font-semibold text-orange-600 mt-1">{formatRupiah(item.price)}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                                
-                                {editingMenu && (
-                                  <Button
-                                    variant="dashed"
-                                    className="w-full border-2 border-dashed border-gray-300 text-gray-500 hover:border-orange-400 hover:text-orange-600"
-                                    onClick={() => addMenuItem(dayIndex, catIndex)}
-                                  >
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Tambah Item
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Preparation Summary Section */}
+          {/* Preparation Summary - Now shown in Calendar or can be removed */}
               {selectedMenu && (
                 <Card className="border-0 shadow-lg shadow-gray-200/50 overflow-hidden">
                   <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
