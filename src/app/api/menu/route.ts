@@ -67,8 +67,9 @@ export async function POST(request: NextRequest) {
         weekNumber,
         year,
         days: {
-          create: days?.map((day: any) => ({
+          create: days?.map((day: any, index: number) => ({
             day: day.day,
+            dayOrder: index + 1, // Add required dayOrder field (1=Senin, 2=Selasa, etc.)
             categories: {
               create: day.categories?.map((cat: any) => ({
                 name: cat.name,
