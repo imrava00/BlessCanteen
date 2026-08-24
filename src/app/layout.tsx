@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "School Catering - Panel Admin",
+  title: " Bless Canteen",
   description: "Panel Administrator untuk mengelola pesanan katering sekolah",
 };
 
