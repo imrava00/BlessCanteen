@@ -200,12 +200,23 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
     
     setSelectedDate(date)
     setEditingDay(null)
+    
+    // Auto-start editing if no menu exists
+    const existingMenu = findMenuForDate(date)
+    if (!existingMenu) {
+      // Delay slightly to ensure state is set
+      setTimeout(() => startEditing(), 100)
+    }
   }
 
   // Start editing selected day
   const startEditing = async () => {
-    if (!selectedDate) return
+    if (!selectedDate) {
+      console.log('startEditing: No selected date')
+      return
+    }
     
+    console.log('startEditing: Starting for date:', selectedDate.toISOString())
     setIsLoading(true)
     
     try {
@@ -213,10 +224,13 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
       const weekNum = getWeekNumber(selectedDate)
       const year = selectedDate.getFullYear()
       
+      console.log('startEditing: Looking for week', weekNum, 'year', year)
+      
       // Check if week exists
       let weekMenu = weeklyMenus.find(wm => wm.weekNumber === weekNum && wm.year === year)
       
       if (!weekMenu) {
+        console.log('startEditing: Week not found, creating new week...')
         // Create new week
         const res = await fetch('/api/menu', {
           method: 'POST',
@@ -234,40 +248,63 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
           })
         })
         
+        console.log('startEditing: API response status:', res.status)
+        
         if (res.ok) {
           toast.success(`Minggu ${weekNum} dibuat!`)
           onRefresh()
           
           // Wait for refresh then set editing
           setTimeout(async () => {
-            const refreshedRes = await fetch('/api/menu')
-            const data = await refreshedRes.json()
-            const newWeek = data.weeklyMenus?.find((wm: WeeklyMenu) => wm.weekNumber === weekNum && wm.year === year)
-            
-            if (newWeek) {
-              const dayData = newWeek.days.find((d: DayMenu) => d.day === dayName)
-              if (dayData) {
-                // Attach the date to the day object
-                dayData.date = selectedDate
-                setEditingDay(dayData)
+            try {
+              console.log('startEditing: Refreshing menu data...')
+              const refreshedRes = await fetch('/api/menu')
+              const data = await refreshedRes.json()
+              console.log('startEditing: Refreshed data:', data.weeklyMenus?.length, 'weeks')
+              const newWeek = data.weeklyMenus?.find((wm: WeeklyMenu) => wm.weekNumber === weekNum && wm.year === year)
+              
+              if (newWeek) {
+                console.log('startEditing: Found new week, looking for day:', dayName)
+                const dayData = newWeek.days.find((d: DayMenu) => d.day === dayName)
+                if (dayData) {
+                  // Attach the date to the day object
+                  dayData.date = selectedDate
+                  setEditingDay(dayData)
+                  console.log('startEditing: Editing mode started!')
+                } else {
+                  console.error('startEditing: Day not found in new week')
+                  toast.error('Hari tidak ditemukan')
+                }
+              } else {
+                console.error('startEditing: New week not found after refresh')
+                toast.error('Minggu baru tidak ditemukan')
               }
+            } catch (refreshError) {
+              console.error('startEditing: Error refreshing:', refreshError)
+              toast.error('Gagal memuat data terbaru')
             }
           }, 500)
         } else {
-          const error = await res.json()
+          const error = await res.json().catch(() => ({ error: 'Unknown error' }))
+          console.error('startEditing: API error:', error)
           toast.error(error.error || 'Gagal membuat minggu')
         }
       } else {
+        console.log('startEditing: Week exists, finding day...')
         // Week exists, find or create the day
         let dayData = weekMenu.days.find(d => d.day === dayName)
         
         if (dayData) {
           dayData.date = selectedDate
           setEditingDay(dayData)
+          console.log('startEditing: Editing mode started for existing day!')
+        } else {
+          console.error('startEditing: Day not found in existing week')
+          toast.error('Hari tidak ditemukan dalam minggu ini')
         }
       }
     } catch (error) {
-      console.error('Error starting edit:', error)
+      console.error('startEditing: Exception:', error)
       toast.error('Terjadi kesalahan')
     } finally {
       setIsLoading(false)
