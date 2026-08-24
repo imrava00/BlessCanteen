@@ -284,6 +284,7 @@ export default function AdminDashboard() {
   // Editing states
   const [editingMenu, setEditingMenu] = useState<DayMenu[] | null>(null)
   const [isSavingMenu, setIsSavingMenu] = useState(false)
+  const [isAddingWeek, setIsAddingWeek] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
   // Check auth on mount
@@ -1053,6 +1054,19 @@ export default function AdminDashboard() {
                       >
                         Batal
                       </Button>
+                      <Button
+                          onClick={handleAddNewWeek}
+                          disabled={isAddingWeek}
+                          className={`bg-green-600 hover:bg-green-700 text-white ${isAddingWeek ? 'opacity-75 cursor-not-allowed' : ''}`}
+                          size="icon"
+                          title={isAddingWeek ? 'Memproses...' : 'Tambah Minggu Baru'}
+                        >
+                          {isAddingWeek ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          ) : (
+                            <Plus className="w-5 h-5" />
+                          )}
+                    </Button>
                     </div>
                   )}
 
