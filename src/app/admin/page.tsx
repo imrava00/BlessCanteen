@@ -516,6 +516,12 @@ export default function AdminDashboard() {
 
   // Handle add new week
   const handleAddNewWeek = async () => {
+    // Prevent double-clicks
+    if (isAddingWeek) return
+    
+    setIsAddingWeek(true)
+    console.log('🔄 Adding new week...')
+    
     try {
       // Find the highest week number from existing menus
       const lastWeek = weeklyMenus.reduce((max, menu) => {
@@ -527,6 +533,8 @@ export default function AdminDashboard() {
       const newWeekNumber = lastWeek.weekNumber + 1
       const newYear = lastWeek.year
       
+      console.log(`📅 Creating Week ${newWeekNumber}, ${newYear}...`)
+      
       // Create new week via API
       const res = await fetch('/api/menu', {
         method: 'POST',
@@ -537,28 +545,57 @@ export default function AdminDashboard() {
           days: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'].map(day => ({
             day,
             categories: [
-              { name: 'Hidangan Utama', icon: '', gradient: 'from-orange-500 to-red-500', items: [] },
-              { name: 'Makanan Ringan', icon: '', gradient: 'from-green-500 to-emerald-400', items: [] },
-              { name: 'Tambahan', icon: '', gradient: 'from-blue-500 to-cyan-400', items: [] }
+              { name: 'Hidangan Utama', icon: '🍽️', gradient: 'from-orange-500 to-red-500', items: [] },
+              { name: 'Makanan Ringan', icon: '🍪', gradient: 'from-green-500 to-emerald-400', items: [] },
+              { name: 'Tambahan', icon: '🥤', gradient: 'from-blue-500 to-cyan-400', items: [] }
             ]
           }))
         })
       })
       
+      console.log('📡 API Response status:', res.status)
+      
       if (res.ok) {
-        toast.success(`Minggu ${newWeekNumber} berhasil ditambahkan!`)
+        const data = await res.json()
+        console.log('✅ Week created:', data)
+        toast.success(`Minggu ${newWeekNumber} berhasil ditambahkan!`, {
+          duration: 3000,
+          position: 'top-right'
+        })
         await loadMenus()
+        
+ // Auto-select the newly created week
+        setTimeout(() => {
+          const newMenu = weeklyMenus.find(m => m.weekNumber === newWeekNumber && m.year === newYear)
+          if (newMenu) {
+            newMenu.days = sortDaysByOrder(newMenu.days)
+            setSelectedMenu(newMenu)
+          }
+        }, 500)
       } else {
         const data = await res.json()
+        console.error('❌ API Error:', data)
         if (res.status === 409) {
-          toast.error('Minggu tersebut sudah ada')
+          toast.error('Minggu tersebut sudah ada!', {
+            duration: 3000,
+            position: 'top-right'
+          })
         } else {
-          toast.error(data.error || 'Gagal menambahkan minggu')
+          toast.error(data.error || 'Gagal menambahkan minggu', {
+            duration: 3000,
+            position: 'top-right'
+          })
         }
       }
     } catch (error) {
-      console.error('Add week exception:', error)
-      toast.error('Terjadi kesalahan saat menambahkan minggu')
+      console.error('❌ Add week exception:', error)
+      toast.error('Terjadi kesalahan saat menambahkan minggu: ' + (error as Error).message, {
+        duration: 3000,
+        position: 'top-right'
+      })
+    } finally {
+      setIsAddingWeek(false)
+      console.log('✅ Add week process completed')
     }
   }
 
@@ -1010,11 +1047,16 @@ export default function AdminDashboard() {
                       {/* Add New Week Button */}
                       <Button
                         onClick={handleAddNewWeek}
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        disabled={isAddingWeek}
+                        className={`bg-green-600 hover:bg-green-700 text-white ${isAddingWeek ? 'opacity-75 cursor-not-allowed' : ''}`}
                         size="icon"
-                        title="Tambah Minggu Baru"
+                        title={isAddingWeek ? 'Memproses...' : 'Tambah Minggu Baru'}
                       >
-                        <Plus className="w-5 h-5" />
+                        {isAddingWeek ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        ) : (
+                          <Plus className="w-5 h-5" />
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -1054,19 +1096,6 @@ export default function AdminDashboard() {
                       >
                         Batal
                       </Button>
-                      <Button
-                          onClick={handleAddNewWeek}
-                          disabled={isAddingWeek}
-                          className={`bg-green-600 hover:bg-green-700 text-white ${isAddingWeek ? 'opacity-75 cursor-not-allowed' : ''}`}
-                          size="icon"
-                          title={isAddingWeek ? 'Memproses...' : 'Tambah Minggu Baru'}
-                        >
-                          {isAddingWeek ? (
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                          ) : (
-                            <Plus className="w-5 h-5" />
-                          )}
-                    </Button>
                     </div>
                   )}
 
