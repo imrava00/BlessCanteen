@@ -636,7 +636,7 @@ export default function AdminDashboard() {
             <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
               <UtensilsCrossed className="w-8 h-8 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">School Catering</CardTitle>
+            <CardTitle className="text-2xl font-bold text-gray-900">Bless Canteen</CardTitle>
             <CardDescription className="text-gray-600">Masuk ke Panel Administrator</CardDescription>
           </CardHeader>
           <CardContent>
@@ -696,7 +696,7 @@ export default function AdminDashboard() {
               <UtensilsCrossed className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-gray-900">School Catering</h1>
+              <h1 className="font-bold text-gray-900">Bless Canteen</h1>
               <p className="text-xs text-gray-500">Panel Admin</p>
             </div>
             <button 
