@@ -9,9 +9,6 @@ import {
   Save, 
   X,
   UtensilsCrossed,
-  Cookie,
-  Coffee,
-  Trash2,
   Calendar as CalendarIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -151,7 +148,6 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
     const days: (Date | null)[] = []
     
     // Add empty cells for days before the first day of month
-    // Adjust for Monday start (if firstDay is Sunday=0, show 6 empty cells, etc.)
     const startOffset = firstDay === 0 ? 6 : firstDay - 1
     for (let i = 0; i < startOffset; i++) {
       days.push(null)
@@ -200,120 +196,12 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
     
     setSelectedDate(date)
     setEditingDay(null)
-    
-    // Auto-start editing if no menu exists
-    const existingMenu = findMenuForDate(date)
-    if (!existingMenu) {
-      // Pass the date directly to avoid state timing issue
-      setTimeout(() => startEditingWithDate(date), 100)
-    }
-  }
-
-  // Start editing with explicit date parameter (avoids state timing issues)
-  const startEditingWithDate = async (date: Date) => {
-    console.log('startEditingWithDate: Starting for date:', date.toISOString())
-    setIsLoading(true)
-    
-    try {
-      const dayName = DAY_NAMES[date.getDay() - 1]
-      const weekNum = getWeekNumber(date)
-      const year = date.getFullYear()
-      
-      console.log('startEditingWithDate: Looking for week', weekNum, 'year', year)
-      
-      // Check if week exists
-      let weekMenu = weeklyMenus.find(wm => wm.weekNumber === weekNum && wm.year === year)
-      
-      if (!weekMenu) {
-        console.log('startEditingWithDate: Week not found, creating new week...')
-        // Create new week
-        const res = await fetch('/api/menu', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            weekNumber: weekNum,
-            year: year,
-            days: DAY_NAMES.map(day => ({
-              day,
-              categories: DEFAULT_CATEGORIES.map(cat => ({
-                ...cat,
-                items: []
-              }))
-            }))
-          })
-        })
-        
-        console.log('startEditingWithDate: API response status:', res.status)
-        
-        if (res.ok) {
-          toast.success(`Minggu ${weekNum} dibuat!`)
-          onRefresh()
-          
-          // Wait for refresh then set editing
-          setTimeout(async () => {
-            try {
-              console.log('startEditingWithDate: Refreshing menu data...')
-              const refreshedRes = await fetch('/api/menu')
-              const data = await refreshedRes.json()
-              console.log('startEditingWithDate: Refreshed data:', data.weeklyMenus?.length, 'weeks')
-              const newWeek = data.weeklyMenus?.find((wm: WeeklyMenu) => wm.weekNumber === weekNum && wm.year === year)
-              
-              if (newWeek) {
-                console.log('startEditingWithDate: Found new week, looking for day:', dayName)
-                const dayData = newWeek.days.find((d: DayMenu) => d.day === dayName)
-                if (dayData) {
-                  // Attach the date to the day object
-                  dayData.date = date
-                  setEditingDay(dayData)
-                  console.log('startEditingWithDate: Editing mode started!')
-                } else {
-                  console.error('startEditingWithDate: Day not found in new week')
-                  toast.error('Hari tidak ditemukan')
-                }
-              } else {
-                console.error('startEditingWithDate: New week not found after refresh')
-                toast.error('Minggu baru tidak ditemukan')
-              }
-            } catch (refreshError) {
-              console.error('startEditingWithDate: Error refreshing:', refreshError)
-              toast.error('Gagal memuat data terbaru')
-            }
-          }, 500)
-        } else {
-          const error = await res.json().catch(() => ({ error: 'Unknown error' }))
-          console.error('startEditingWithDate: API error:', error)
-          toast.error(error.error || 'Gagal membuat minggu')
-        }
-      } else {
-        console.log('startEditingWithDate: Week exists, finding day...')
-        // Week exists, find or create the day
-        let dayData = weekMenu.days.find(d => d.day === dayName)
-        
-        if (dayData) {
-          dayData.date = date
-          setEditingDay(dayData)
-          console.log('startEditingWithDate: Editing mode started for existing day!')
-        } else {
-          console.error('startEditingWithDate: Day not found in existing week')
-          toast.error('Hari tidak ditemukan dalam minggu ini')
-        }
-      }
-    } catch (error) {
-      console.error('startEditingWithDate: Exception:', error)
-      toast.error('Terjadi kesalahan')
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   // Start editing selected day
   const startEditing = async () => {
-    if (!selectedDate) {
-      console.log('startEditing: No selected date')
-      return
-    }
+    if (!selectedDate) return
     
-    console.log('startEditing: Starting for date:', selectedDate.toISOString())
     setIsLoading(true)
     
     try {
@@ -321,13 +209,10 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
       const weekNum = getWeekNumber(selectedDate)
       const year = selectedDate.getFullYear()
       
-      console.log('startEditing: Looking for week', weekNum, 'year', year)
-      
       // Check if week exists
       let weekMenu = weeklyMenus.find(wm => wm.weekNumber === weekNum && wm.year === year)
       
       if (!weekMenu) {
-        console.log('startEditing: Week not found, creating new week...')
         // Create new week
         const res = await fetch('/api/menu', {
           method: 'POST',
@@ -335,8 +220,9 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
           body: JSON.stringify({
             weekNumber: weekNum,
             year: year,
-            days: DAY_NAMES.map(day => ({
+            days: DAY_NAMES.map((day, index) => ({
               day,
+              dayOrder: index + 1,
               categories: DEFAULT_CATEGORIES.map(cat => ({
                 ...cat,
                 items: []
@@ -345,63 +231,39 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
           })
         })
         
-        console.log('startEditing: API response status:', res.status)
-        
         if (res.ok) {
           toast.success(`Minggu ${weekNum} dibuat!`)
           onRefresh()
           
           // Wait for refresh then set editing
           setTimeout(async () => {
-            try {
-              console.log('startEditing: Refreshing menu data...')
-              const refreshedRes = await fetch('/api/menu')
-              const data = await refreshedRes.json()
-              console.log('startEditing: Refreshed data:', data.weeklyMenus?.length, 'weeks')
-              const newWeek = data.weeklyMenus?.find((wm: WeeklyMenu) => wm.weekNumber === weekNum && wm.year === year)
-              
-              if (newWeek) {
-                console.log('startEditing: Found new week, looking for day:', dayName)
-                const dayData = newWeek.days.find((d: DayMenu) => d.day === dayName)
-                if (dayData) {
-                  // Attach the date to the day object
-                  dayData.date = selectedDate
-                  setEditingDay(dayData)
-                  console.log('startEditing: Editing mode started!')
-                } else {
-                  console.error('startEditing: Day not found in new week')
-                  toast.error('Hari tidak ditemukan')
-                }
-              } else {
-                console.error('startEditing: New week not found after refresh')
-                toast.error('Minggu baru tidak ditemukan')
+            const refreshedRes = await fetch('/api/menu')
+            const data = await refreshedRes.json()
+            const newWeek = data.weeklyMenus?.find((wm: WeeklyMenu) => wm.weekNumber === weekNum && wm.year === year)
+            
+            if (newWeek) {
+              const dayData = newWeek.days.find((d: DayMenu) => d.day === dayName)
+              if (dayData) {
+                dayData.date = selectedDate
+                setEditingDay(dayData)
               }
-            } catch (refreshError) {
-              console.error('startEditing: Error refreshing:', refreshError)
-              toast.error('Gagal memuat data terbaru')
             }
           }, 500)
         } else {
-          const error = await res.json().catch(() => ({ error: 'Unknown error' }))
-          console.error('startEditing: API error:', error)
+          const error = await res.json().catch(() => ({ error: 'Gagal membuat minggu' }))
           toast.error(error.error || 'Gagal membuat minggu')
         }
       } else {
-        console.log('startEditing: Week exists, finding day...')
         // Week exists, find or create the day
         let dayData = weekMenu.days.find(d => d.day === dayName)
         
         if (dayData) {
           dayData.date = selectedDate
           setEditingDay(dayData)
-          console.log('startEditing: Editing mode started for existing day!')
-        } else {
-          console.error('startEditing: Day not found in existing week')
-          toast.error('Hari tidak ditemukan dalam minggu ini')
         }
       }
     } catch (error) {
-      console.error('startEditing: Exception:', error)
+      console.error('Error starting edit:', error)
       toast.error('Terjadi kesalahan')
     } finally {
       setIsLoading(false)
@@ -480,7 +342,7 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
         setEditingDay(null)
         onRefresh()
       } else {
-        const error = await res.json()
+        const error = await res.json().catch(() => ({ error: 'Gagal menyimpan' }))
         toast.error(error.error || 'Gagal menyimpan')
       }
     } catch (error) {
@@ -622,7 +484,7 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
       </Card>
 
       {/* Selected Day Detail / Edit Panel */}
-      {selectedDate && !isWeekend(selectedDate) && (
+      {selectedDate && !selectedDate.getDay() % 6 === 0 && (
         <Card className={isEditing ? 'border-orange-200 bg-orange-50/30' : ''}>
           <CardHeader className={isEditing ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-lg' : ''}>
             <div className="flex items-center justify-between">
@@ -636,7 +498,7 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
                 </span>
                 
                 {!isEditing && !isPast(selectedDate) && (
-                  <Button onClick={() => startEditingWithDate(selectedDate)} disabled={isLoading} size="sm">
+                  <Button onClick={startEditing} disabled={isLoading} size="sm">
                     {isLoading ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     ) : (
@@ -715,7 +577,7 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
                               onClick={() => removeMenuItem(catIndex, itemIndex)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <X className="w-4 h-4" />
                             </Button>
                           </div>
                         </div>
@@ -777,7 +639,7 @@ export default function MenuCalendar({ weeklyMenus, onRefresh }: MenuCalendarPro
                   Tanggal ini belum memiliki menu catering
                 </p>
                 {!isPast(selectedDate) && (
-                  <Button onClick={() => startEditingWithDate(selectedDate)} disabled={isLoading}>
+                  <Button onClick={startEditing} disabled={isLoading}>
                     {isLoading ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     ) : (
