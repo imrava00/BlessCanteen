@@ -561,6 +561,48 @@ export default function AdminDashboard() {
     }
   }
 
+  // Handle delete week
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [weekToDelete, setWeekToDelete] = useState<WeeklyMenu | null>(null)
+  const [isDeletingWeek, setIsDeletingWeek] = useState(false)
+
+  const handleDeleteWeekClick = () => {
+    if (!selectedMenu) {
+      toast.error('Pilih periode yang ingin dihapus terlebih dahulu')
+      return
+    }
+    setWeekToDelete(selectedMenu)
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleDeleteWeekConfirm = async () => {
+    if (!weekToDelete) return
+    
+    setIsDeletingWeek(true)
+    try {
+      const res = await fetch(`/api/menu/${weekToDelete.id}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        toast.success(`Periode ${getWeekDateRange(weekToDelete.weekNumber, weekToDelete.year)} berhasil dihapus!`)
+        setSelectedMenu(null)
+        setEditingMenu(null)
+        setDeleteConfirmOpen(false)
+        setWeekToDelete(null)
+        await loadMenus()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Gagal menghapus periode')
+      }
+    } catch (error) {
+      console.error('Delete week exception:', error)
+      toast.error('Terjadi kesalahan saat menghapus periode')
+    } finally {
+      setIsDeletingWeek(false)
+    }
+  }
+
   // Handle order status update
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     try {
@@ -636,7 +678,7 @@ export default function AdminDashboard() {
             <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
               <UtensilsCrossed className="w-8 h-8 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">Bless Canteen</CardTitle>
+            <CardTitle className="text-2xl font-bold text-gray-900">Bless Canteen Admin</CardTitle>
             <CardDescription className="text-gray-600">Masuk ke Panel Administrator</CardDescription>
           </CardHeader>
           <CardContent>
@@ -696,7 +738,7 @@ export default function AdminDashboard() {
               <UtensilsCrossed className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-gray-900">Bless Canteen</h1>
+              <h1 className="font-bold text-gray-900">Bless Canteen Admin</h1>
               <p className="text-xs text-gray-500">Panel Admin</p>
             </div>
             <button 
@@ -1009,6 +1051,17 @@ export default function AdminDashboard() {
                         title="Tambah Minggu Baru"
                       >
                         <Plus className="w-5 h-5" />
+                      </Button>
+                      
+                      {/* Delete Week Button */}
+                      <Button
+                        onClick={handleDeleteWeekClick}
+                        disabled={!selectedMenu || weeklyMenus.length <= 1}
+                        className="bg-red-600 hover:bg-red-700 text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        size="icon"
+                        title="Hapus Periode Ini"
+                      >
+                        <Trash2 className="w-5 h-5" />
                       </Button>
                     </div>
                   </div>
@@ -1438,6 +1491,59 @@ export default function AdminDashboard() {
           )}
         </div>
       </main>
+
+      {/* Delete Week Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-5 h-5" />
+              Hapus Periode Menu
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              Apakah Anda yakin ingin menghapus periode menu ini?
+              <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                <p className="font-semibold text-red-800">
+                  {weekToDelete ? getWeekDateRange(weekToDelete.weekNumber, weekToDelete.year) : ''}
+                </p>
+                <p className="text-sm text-red-600 mt-1">
+                  Semua menu untuk periode ini akan dihapus permanen.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteConfirmOpen(false)
+                setWeekToDelete(null)
+              }}
+              disabled={isDeletingWeek}
+            >
+              Batal
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDeleteWeekConfirm}
+              disabled={isDeletingWeek}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeletingWeek ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Menghapus...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Ya, Hapus Periode
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
