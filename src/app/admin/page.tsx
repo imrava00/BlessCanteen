@@ -678,11 +678,6 @@ export default function AdminDashboard() {
                 )}
               </Button>
             </form>
-            <div className="mt-6 p-3 bg-orange-50 rounded-lg">
-              <p className="text-xs text-orange-700 text-center">
-                <strong>Demo:</strong> admin / admin123
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
