@@ -120,3 +120,35 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print Styles for Invoice */
+@media print {
+  /* Hide everything except the invoice when printing */
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-only,
+  .print-only * {
+    visibility: visible;
+  }
+  
+  .print-only {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  
+  /* Ensure invoice looks good on paper */
+  .print-invoice {
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Hide unnecessary elements */
+  nav, header, .no-print, button, .sidebar {
+    display: none !important;
+  }
+}

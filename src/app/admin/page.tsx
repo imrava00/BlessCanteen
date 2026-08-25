@@ -24,7 +24,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Flame
+  Flame,
+  Printer
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -94,6 +95,8 @@ interface Order {
   parentPhone: string
   totalAmount: number
   status: string
+  weekNumber?: number | null
+  year?: number | null
   createdAt: string
   items: OrderItem[]
 }
@@ -285,6 +288,9 @@ export default function AdminDashboard() {
   const [editingMenu, setEditingMenu] = useState<DayMenu[] | null>(null)
   const [isSavingMenu, setIsSavingMenu] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  
+  // Print invoice state
+  const [printOrder, setPrintOrder] = useState<Order | null>(null)
 
   // Check auth on mount
   useEffect(() => {
@@ -622,6 +628,22 @@ export default function AdminDashboard() {
     } catch (error) {
       toast.error('Terjadi kesalahan')
     }
+  }
+
+  // Handle print invoice
+  const handlePrintInvoice = (order: Order) => {
+    setPrintOrder(order)
+    setTimeout(() => {
+      window.print()
+    }, 100)
+  }
+
+  // Get order period display text
+  const getOrderPeriodText = (order: Order): string => {
+    if (order.weekNumber && order.year) {
+      return getWeekDateRange(order.weekNumber, order.year)
+    }
+    return '-'
   }
 
   // Handle search with debounce
@@ -1371,6 +1393,7 @@ export default function AdminDashboard() {
                           <TableHead>ID Pesanan</TableHead>
                           <TableHead>Siswa</TableHead>
                           <TableHead className="hidden md:table-cell">Sekolah</TableHead>
+                          <TableHead>Periode Menu</TableHead>
                           <TableHead>Total</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Tanggal</TableHead>
@@ -1391,6 +1414,12 @@ export default function AdminDashboard() {
                               <span className="text-sm">{order.school}</span>
                               <br />
                               <span className="text-xs text-gray-500">{order.grade}</span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs font-normal">
+                                <Calendar className="w-3 h-3 mr-1" />
+                                {getOrderPeriodText(order)}
+                              </Badge>
                             </TableCell>
                             <TableCell className="font-semibold">{formatRupiah(order.totalAmount)}</TableCell>
                             <TableCell>
@@ -1431,24 +1460,35 @@ export default function AdminDashboard() {
                               {formatDate(order.createdAt)}
                             </TableCell>
                             <TableCell>
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={() => setSelectedOrderId(order.id)}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                                  <DialogHeader>
-                                    <DialogTitle>Detail Pesanan</DialogTitle>
-                                    <DialogDescription>{order.orderId}</DialogDescription>
-                                  </DialogHeader>
-                                  <OrderDetail order={order} />
-                                </DialogContent>
-                              </Dialog>
+                              <div className="flex items-center gap-1">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      onClick={() => setSelectedOrderId(order.id)}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                                    <DialogHeader>
+                                      <DialogTitle>Detail Pesanan</DialogTitle>
+                                      <DialogDescription>{order.orderId}</DialogDescription>
+                                    </DialogHeader>
+                                    <OrderDetail order={order} />
+                                  </DialogContent>
+                                </Dialog>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handlePrintInvoice(order)}
+                                  title="Cetak Invoice"
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1544,6 +1584,13 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Print Invoice (Hidden, shown only when printing) */}
+      {printOrder && (
+        <div className="print-only fixed inset-0 bg-white z-[9999] overflow-auto">
+          <PrintInvoice order={printOrder} />
+        </div>
+      )}
     </div>
   )
 }
@@ -1625,6 +1672,159 @@ function OrderDetail({ order }: { order: Order }) {
       <div className="flex justify-between items-center">
         <span className="font-semibold text-lg">Total Pembayaran</span>
         <span className="font-bold text-xl text-orange-600">{formatRupiah(order.totalAmount)}</span>
+      </div>
+    </div>
+  )
+}
+
+// Print Invoice Component (Print-friendly)
+function PrintInvoice({ order }: { order: Order }) {
+  // Group items by day
+  const groupedItems = order.items.reduce((acc, item) => {
+    if (!acc[item.day]) acc[item.day] = []
+    acc[item.day].push(item)
+    return acc
+  }, {} as Record<string, OrderItem[]>)
+
+  const today = new Date().toLocaleDateString('id-ID', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+
+  return (
+    <div className="print-invoice p-8 bg-white text-black max-w-4xl mx-auto" style={{ fontFamily: 'Arial, sans-serif' }}>
+      {/* Header */}
+      <div className="text-center mb-8 border-b-2 border-gray-300 pb-6">
+        <h1 className="text-3xl font-bold text-orange-600 mb-2">BLESS CANTEEN</h1>
+        <p className="text-lg text-gray-600">Sistem Pemesanan Katering Sekolah</p>
+        <p className="text-sm text-gray-500 mt-2">INVOICE / NOTA PEMESANAN</p>
+      </div>
+
+      {/* Invoice Info */}
+      <div className="grid grid-cols-2 gap-8 mb-8">
+        <div>
+          <h3 className="font-bold text-sm text-gray-500 mb-2">INFO INVOICE</h3>
+          <table className="w-full text-sm">
+            <tbody>
+              <tr>
+                <td className="py-1 text-gray-600">No. Invoice</td>
+                <td className="py-1 font-bold">{order.orderId}</td>
+              </tr>
+              <tr>
+                <td className="py-1 text-gray-600">Tanggal Cetak</td>
+                <td className="py-1">{today}</td>
+              </tr>
+              <tr>
+                <td className="py-1 text-gray-600">Periode Menu</td>
+                <td className="py-1">
+                  {order.weekNumber && order.year ? getWeekDateRange(order.weekNumber, order.year) : '-'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 className="font-bold text-sm text-gray-500 mb-2">DATA PELANGGAN</h3>
+          <table className="w-full text-sm">
+            <tbody>
+              <tr>
+                <td className="py-1 text-gray-600">Nama Siswa</td>
+                <td className="py-1 font-bold">{order.studentName}</td>
+              </tr>
+              <tr>
+                <td className="py-1 text-gray-600">Sekolah / Kelas</td>
+                <td className="py-1">{order.school} ({order.grade})</td>
+              </tr>
+              <tr>
+                <td className="py-1 text-gray-600">Orang Tua/Wali</td>
+                <td className="py-1">{order.parentName}</td>
+              </tr>
+              <tr>
+                <td className="py-1 text-gray-600">Telepon</td>
+                <td className="py-1">{order.parentPhone}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Order Items Table */}
+      <div className="mb-8">
+        <h3 className="font-bold text-sm text-gray-500 mb-3">DETAIL PESANAN</h3>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-orange-50 border-b-2 border-orange-200">
+              <th className="text-left p-3 text-sm font-bold text-gray-700">Hari</th>
+              <th className="text-left p-3 text-sm font-bold text-gray-700">Kategori</th>
+              <th className="text-left p-3 text-sm font-bold text-gray-700">Menu Item</th>
+              <th className="text-center p-3 text-sm font-bold text-gray-700">Qty</th>
+              <th className="text-right p-3 text-sm font-bold text-gray-700">Harga</th>
+              <th className="text-right p-3 text-sm font-bold text-gray-700">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(groupedItems).map(([day, items], dayIdx) => 
+              items.map((item, idx) => (
+                <tr key={`${day}-${idx}`} className={`border-b ${idx === items.length - 1 ? 'border-b-2 border-gray-300' : 'border-gray-100'}`}>
+                  {idx === 0 && (
+                    <td className="p-3 font-medium align-top row-span-{items.length}" rowSpan={items.length}>
+                      {day}
+                    </td>
+                  )}
+                  <td className="p-3 text-sm text-gray-600">{item.categoryName}</td>
+                  <td className="p-3 text-sm">
+                    <span className="mr-2">{item.itemEmoji}</span>
+                    {item.itemName}
+                  </td>
+                  <td className="p-3 text-center text-sm">{item.quantity}</td>
+                  <td className="p-3 text-right text-sm">{formatRupiah(item.price)}</td>
+                  <td className="p-3 text-right text-sm font-medium">{formatRupiah(item.price * item.quantity)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+          <tfoot>
+            <tr className="bg-gray-50 border-t-2 border-gray-300">
+              <td colSpan={5} className="p-4 text-right font-bold text-lg">
+                TOTAL PEMBAYARAN
+              </td>
+              <td className="p-4 text-right font-bold text-xl text-orange-600">
+                {formatRupiah(order.totalAmount)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* Status & Notes */}
+      <div className="grid grid-cols-2 gap-8 mb-8">
+        <div>
+          <h3 className="font-bold text-sm text-gray-500 mb-2">STATUS PESANAN</h3>
+          <div className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${
+            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+            order.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+            'bg-red-100 text-red-800'
+          }`}>
+            {order.status === 'pending' ? '⏳ MENUNGGU PEMBAYARAN' :
+             order.status === 'confirmed' ? '✅ DIKONFIRMASI' :
+             '❌ DIBATALKAN'}
+          </div>
+        </div>
+        <div>
+          <h3 className="font-bold text-sm text-gray-500 mb-2">TANGGAL PESANAN</h3>
+          <p className="text-sm">{formatDate(order.createdAt)}</p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center pt-6 border-t-2 border-gray-300">
+        <p className="text-xs text-gray-500">
+          Terima kasih telah memesan di Bless Canteen! 🍽️
+        </p>
+        <p className="text-xs text-gray-400 mt-2">
+          Invoice ini dicetak secara otomatis dari sistem.
+        </p>
       </div>
     </div>
   )
