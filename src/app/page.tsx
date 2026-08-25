@@ -404,7 +404,7 @@ export default function OrderPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl shadow-lg mb-4">
               <UtensilsCrossed className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Bless Canteen</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Bless Canteen Catering</h1>
             <p className="text-gray-600">Pemesanan Katering Sekolah Mingguan</p>
           </div>
 
@@ -532,9 +532,9 @@ export default function OrderPage() {
           <div className="lg:grid lg:grid-cols-3 lg:gap-6">
             {/* Main Content - Menu */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Day Tabs - Fixed Size (No Crop) */}
+              {/* Day Tabs - Scrollable on Mobile */}
               <div className="bg-white rounded-2xl shadow-lg p-4">
-                <div className="flex gap-2 justify-center">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 sm:justify-center lg:justify-center -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
                   {weeklyMenu.days.map((menu, index) => {
                     const dayKey = menu.day.toLowerCase()
                     const hasSelection = (selections[dayKey] || []).length > 0
